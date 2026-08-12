@@ -61,10 +61,10 @@ async function main() {
 
     let configPath = args.c;
     if (typeof configPath === "undefined") {
-        configPath = path.join(process.cwd(), "settings.json");
+        configPath = path.join(__dirname, "settings.json");
     } else {
         if (!path.isAbsolute(configPath)) {
-            configPath = path.join(process.cwd(), configPath);
+            configPath = path.join(__dirname, configPath);
         }
     }
 
