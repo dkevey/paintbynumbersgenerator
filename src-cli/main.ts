@@ -40,8 +40,22 @@ async function main() {
     const imagePath = args.i;
     const svgPath = args.o;
 
+    // productName can be provided via -n or --productName. If not provided, derive from the output path basename.
+    const productNameArg = args.n || args.productName;
+    let productName = productNameArg;
+    if (!productName && typeof svgPath !== "undefined") {
+        productName = path.basename(svgPath, path.extname(svgPath));
+    }
+    if (!productName) {
+        productName = "Untitled";
+    }
+    // sanitize productName for filenames
+    productName = productName.replace(/\s+/g, "_").replace(/[^a-zA-Z0-9_-]/g, "");
+
+    const wfs = !!(args.w || args.wfs);
+
     if (typeof imagePath === "undefined" || typeof svgPath === "undefined") {
-        console.log("Usage: exe -i <input_image> -o <output_svg> [-c <settings_json>]");
+        console.log("Usage: exe -i <input_image> -o <output_svg> [-c <settings_json>] [-n <productName>] [--wfs]");
         process.exit(1);
     }
 
@@ -151,20 +165,28 @@ async function main() {
         // progress
     });
 
-    for (const profile of settings.outputProfiles) {
-        console.log("Generating output for " + profile.name);
+    if (wfs) {
+        // Wattle Fern Studio presets: generate five variants (SVG + PNG) from the same processed data
+        const variants = [
+            { suffix: "BW_Numbers", svgShowLabels: true, svgFillFacets: false, svgShowBorders: true },
+            { suffix: "Colour_Reference", svgShowLabels: false, svgFillFacets: true, svgShowBorders: false },
+            { suffix: "Colour_Numbers", svgShowLabels: true, svgFillFacets: true, svgShowBorders: false },
+            { suffix: "Colour_Numbers_Outline", svgShowLabels: true, svgFillFacets: true, svgShowBorders: true },
+            { suffix: "BW_Outline", svgShowLabels: false, svgFillFacets: false, svgShowBorders: true },
+        ];
 
-        if (typeof profile.filetype === "undefined") {
-            profile.filetype = "svg";
-        }
+        for (const v of variants) {
+            const baseName = `WFS_${productName}_${v.suffix}`;
+            const svgProfilePath = path.join(path.dirname(svgPath), baseName + ".svg");
+            const pngProfilePath = path.join(path.dirname(svgPath), baseName + ".png");
 
-        const svgProfilePath = path.join(path.dirname(svgPath), path.basename(svgPath).substr(0, path.basename(svgPath).length - path.extname(svgPath).length) + "-" + profile.name) + "." + profile.filetype;
-        const svgString = await createSVG(facetResult, colormapResult.colorsByIndex, profile.svgSizeMultiplier, profile.svgFillFacets, profile.svgShowBorders, profile.svgShowLabels, profile.svgFontSize, profile.svgFontColor);
+            console.log(`Generating WFS variant ${v.suffix} -> ${baseName}`);
+            const svgString = await createSVG(facetResult, colormapResult.colorsByIndex, 3, v.svgFillFacets, v.svgShowBorders, v.svgShowLabels, 60, "#000");
 
-        if (profile.filetype === "svg") {
+            // write SVG
             fs.writeFileSync(svgProfilePath, svgString);
-        } else if (profile.filetype === "png") {
 
+            // write PNG via svg2img
             const imageBuffer = await new Promise<Buffer>((then, reject) => {
                 svg2img(svgString, function (error: Error, buffer: Buffer) {
                     if (error) {
@@ -174,18 +196,45 @@ async function main() {
                     }
                 });
             });
-            fs.writeFileSync(svgProfilePath, imageBuffer);
-        } else if (profile.filetype === "jpg") {
-            const imageBuffer = await new Promise<Buffer>((then, reject) => {
-                svg2img(svgString, { format: "jpg", quality: profile.filetypeQuality }, function (error: Error, buffer: Buffer) {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        then(buffer);
-                    }
+            fs.writeFileSync(pngProfilePath, imageBuffer);
+        }
+    } else {
+        for (const profile of settings.outputProfiles) {
+            console.log("Generating output for " + profile.name);
+
+            if (typeof profile.filetype === "undefined") {
+                profile.filetype = "svg";
+            }
+
+            const svgProfilePath = path.join(path.dirname(svgPath), path.basename(svgPath).substr(0, path.basename(svgPath).length - path.extname(svgPath).length) + "-" + profile.name) + "." + profile.filetype;
+            const svgString = await createSVG(facetResult, colormapResult.colorsByIndex, profile.svgSizeMultiplier, profile.svgFillFacets, profile.svgShowBorders, profile.svgShowLabels, profile.svgFontSize, profile.svgFontColor);
+
+            if (profile.filetype === "svg") {
+                fs.writeFileSync(svgProfilePath, svgString);
+            } else if (profile.filetype === "png") {
+
+                const imageBuffer = await new Promise<Buffer>((then, reject) => {
+                    svg2img(svgString, function (error: Error, buffer: Buffer) {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            then(buffer);
+                        }
+                    });
                 });
-            });
-            fs.writeFileSync(svgProfilePath, imageBuffer);
+                fs.writeFileSync(svgProfilePath, imageBuffer);
+            } else if (profile.filetype === "jpg") {
+                const imageBuffer = await new Promise<Buffer>((then, reject) => {
+                    svg2img(svgString, { format: "jpg", quality: profile.filetypeQuality }, function (error: Error, buffer: Buffer) {
+                        if (error) {
+                            reject(error);
+                        } else {
+                            then(buffer);
+                        }
+                    });
+                });
+                fs.writeFileSync(svgProfilePath, imageBuffer);
+            }
         }
     }
 

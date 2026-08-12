@@ -1,6 +1,6 @@
 {
     "randomSeed": 7707,
-    "kMeansNrOfClusters": 16,
+    "kMeansNrOfClusters": 30,
     "kMeansMinDeltaDifference": 1,
     "kMeansClusteringColorSpace": 0,
     "kMeansColorRestrictions": [],
