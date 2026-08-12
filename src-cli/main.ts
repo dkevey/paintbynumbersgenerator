@@ -112,7 +112,7 @@ async function main() {
     ctxKmeans.fillRect(0, 0, cKmeans.width, cKmeans.height);
 
     const kmeansImgData = ctxKmeans.getImageData(0, 0, cKmeans.width, cKmeans.height) as unknown as ImageData;
-    await ColorReducer.applyKMeansClustering(imgData, kmeansImgData, ctx, settings, (kmeans) => {
+    await ColorReducer.applyKMeansClustering(imgData, kmeansImgData, ctx as unknown as CanvasRenderingContext2D, settings, (kmeans) => {
         const progress = (100 - (kmeans.currentDeltaDistanceDifference > 100 ? 100 : kmeans.currentDeltaDistanceDifference)) / 100;
         ctxKmeans.putImageData(kmeansImgData, 0, 0);
     });
