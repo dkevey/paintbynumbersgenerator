@@ -74,7 +74,7 @@ async function main() {
     const c = canvas.createCanvas(img.width, img.height);
     const ctx = c.getContext("2d");
     ctx.drawImage(img, 0, 0, c.width, c.height);
-    let imgData = ctx.getImageData(0, 0, c.width, c.height);
+    let imgData = ctx.getImageData(0, 0, c.width, c.height) as unknown as ImageData;
 
     // resize if required
     if (settings.resizeImageIfTooLarge && (c.width > settings.resizeImageWidth || c.height > settings.resizeImageHeight)) {
@@ -100,7 +100,7 @@ async function main() {
         c.width = width;
         c.height = height;
         ctx.drawImage(tempCanvas, 0, 0, width, height);
-        imgData = ctx.getImageData(0, 0, c.width, c.height);
+        imgData = ctx.getImageData(0, 0, c.width, c.height) as unknown as ImageData;
 
         console.log(`Resized image to ${width}x${height}`);
     }
@@ -111,7 +111,7 @@ async function main() {
     ctxKmeans.fillStyle = "white";
     ctxKmeans.fillRect(0, 0, cKmeans.width, cKmeans.height);
 
-    const kmeansImgData = ctxKmeans.getImageData(0, 0, cKmeans.width, cKmeans.height);
+    const kmeansImgData = ctxKmeans.getImageData(0, 0, cKmeans.width, cKmeans.height) as unknown as ImageData;
     await ColorReducer.applyKMeansClustering(imgData, kmeansImgData, ctx, settings, (kmeans) => {
         const progress = (100 - (kmeans.currentDeltaDistanceDifference > 100 ? 100 : kmeans.currentDeltaDistanceDifference)) / 100;
         ctxKmeans.putImageData(kmeansImgData, 0, 0);
