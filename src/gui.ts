@@ -183,10 +183,7 @@ function createPaletteHtml(colorsByIndex: RGB[]) {
     return $(html);
 }
 
-export function downloadPalettePng() {
-    if (processResult == null) { return; }
-    const colorsByIndex: RGB[] = processResult.colorsByIndex;
-
+function createPaletteCanvas(colorsByIndex: RGB[]): HTMLCanvasElement {
     const canvas = document.createElement("canvas");
 
     const nrOfItemsPerRow = 10;
@@ -230,12 +227,42 @@ export function downloadPalettePng() {
         ctx.fillText(rgbText, x + cellWidth / 2 - rgbTextSize.width / 2, y + cellHeight - 10);
     }
 
-    const dataURL = canvas.toDataURL("image/png");
-    const dl = document.createElement("a");
-    document.body.appendChild(dl);
-    dl.setAttribute("href", dataURL);
-    dl.setAttribute("download", "palette.png");
-    dl.click();
+    return canvas;
+}
+
+export async function createPalettePngBlob(): Promise<Blob> {
+    if (processResult == null) {
+        throw new Error("No processed result available");
+    }
+
+    const canvas = createPaletteCanvas(processResult.colorsByIndex);
+
+    return await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob);
+            } else {
+                reject(new Error("Failed to generate palette PNG"));
+            }
+        }, "image/png");
+    });
+}
+
+export async function downloadPalettePng() {
+    try {
+        const blob = await createPalettePngBlob();
+        const dataURL = URL.createObjectURL(blob);
+        const dl = document.createElement("a");
+        document.body.appendChild(dl);
+        dl.setAttribute("href", dataURL);
+        dl.setAttribute("download", "palette.png");
+        dl.click();
+        setTimeout(() => URL.revokeObjectURL(dataURL), 0);
+        dl.remove();
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        alert("Unable to create palette PNG: " + message);
+    }
 }
 
 export function downloadPNG() {

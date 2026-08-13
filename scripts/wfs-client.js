@@ -105,6 +105,10 @@
                 fd.append('pngFiles', pngBlob, pngFileName);
                 baseJson.variants.push({ name: `WFS_${safeName}_${v.label}`, fill: false, stroke: false, labels: false });
             }
+
+            const palettePngBlob = await gui.createPalettePngBlob();
+            fd.append('pngFiles', palettePngBlob, `WFS_${safeName}_Colour_Palette.png`);
+
             // replace baseJson with updated variants
             fd.set('baseJson', JSON.stringify(baseJson, null, 2));
 

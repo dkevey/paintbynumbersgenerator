@@ -3044,7 +3044,7 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
 define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"], function (require, exports, common_8, guiprocessmanager_1, settings_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.loadExample = exports.downloadSVG = exports.downloadPNG = exports.downloadPalettePng = exports.updateOutput = exports.process = exports.createWfsExportSvgs = exports.getProcessResult = exports.parseSettings = exports.log = exports.timeEnd = exports.time = void 0;
+    exports.loadExample = exports.downloadSVG = exports.downloadPNG = exports.downloadPalettePng = exports.createPalettePngBlob = exports.updateOutput = exports.process = exports.createWfsExportSvgs = exports.getProcessResult = exports.parseSettings = exports.log = exports.timeEnd = exports.time = void 0;
     let processResult = null;
     let cancellationToken = new common_8.CancellationToken();
     function updateWfsExportState(enabled) {
@@ -3217,11 +3217,7 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
         }
         return $(html);
     }
-    function downloadPalettePng() {
-        if (processResult == null) {
-            return;
-        }
-        const colorsByIndex = processResult.colorsByIndex;
+    function createPaletteCanvas(colorsByIndex) {
         const canvas = document.createElement("canvas");
         const nrOfItemsPerRow = 10;
         const nrRows = Math.ceil(colorsByIndex.length / nrOfItemsPerRow);
@@ -3257,12 +3253,45 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
             ctx.fillStyle = "black";
             ctx.fillText(rgbText, x + cellWidth / 2 - rgbTextSize.width / 2, y + cellHeight - 10);
         }
-        const dataURL = canvas.toDataURL("image/png");
-        const dl = document.createElement("a");
-        document.body.appendChild(dl);
-        dl.setAttribute("href", dataURL);
-        dl.setAttribute("download", "palette.png");
-        dl.click();
+        return canvas;
+    }
+    function createPalettePngBlob() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (processResult == null) {
+                throw new Error("No processed result available");
+            }
+            const canvas = createPaletteCanvas(processResult.colorsByIndex);
+            return yield new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        resolve(blob);
+                    }
+                    else {
+                        reject(new Error("Failed to generate palette PNG"));
+                    }
+                }, "image/png");
+            });
+        });
+    }
+    exports.createPalettePngBlob = createPalettePngBlob;
+    function downloadPalettePng() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const blob = yield createPalettePngBlob();
+                const dataURL = URL.createObjectURL(blob);
+                const dl = document.createElement("a");
+                document.body.appendChild(dl);
+                dl.setAttribute("href", dataURL);
+                dl.setAttribute("download", "palette.png");
+                dl.click();
+                setTimeout(() => URL.revokeObjectURL(dataURL), 0);
+                dl.remove();
+            }
+            catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                alert("Unable to create palette PNG: " + message);
+            }
+        });
     }
     exports.downloadPalettePng = downloadPalettePng;
     function downloadPNG() {
