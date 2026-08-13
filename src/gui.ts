@@ -11,6 +11,17 @@ declare function saveSvgAsPng(el: Node, filename: string): void;
 let processResult: ProcessResult | null = null;
 let cancellationToken: CancellationToken = new CancellationToken();
 
+function updateWfsExportState(enabled: boolean) {
+    if (typeof window !== "undefined") {
+        (window as any).__wfsExportReady = !!enabled;
+    }
+    const exportBtn = document.getElementById("btnExportWFS") as HTMLButtonElement | null;
+    if (exportBtn) {
+        exportBtn.disabled = !enabled;
+        exportBtn.classList.toggle("disabled", !enabled);
+    }
+}
+
 const timers: IMap<Date> = {};
 export function time(name: string) {
     console.time(name);
@@ -88,18 +99,49 @@ export function parseSettings(): Settings {
     return settings;
 }
 
+export function getProcessResult(): ProcessResult | null {
+    return processResult;
+}
+
+export async function createWfsExportSvgs(sizeMultiplier: number, fontSize: number, fontColor: string) {
+    if (processResult == null) {
+        throw new Error('No processed result available');
+    }
+
+    const variants = [
+        { label: 'BW_Numbers', fill: false, stroke: true, labels: true },
+        { label: 'BW_Outline', fill: false, stroke: true, labels: false },
+        { label: 'Colour_Reference', fill: true, stroke: false, labels: false },
+        { label: 'Colour_Numbers', fill: true, stroke: false, labels: true },
+        { label: 'Colour_Numbers_Outline', fill: true, stroke: true, labels: true }
+    ];
+
+    const result: { label: string; svg: SVGElement }[] = [];
+    for (const v of variants) {
+        // Reuse the same processed facet result and colorsByIndex for each variant
+        const svgEl = await GUIProcessManager.createSVG(processResult.facetResult, processResult.colorsByIndex, sizeMultiplier, v.fill, v.stroke, v.labels, fontSize, fontColor);
+        result.push({ label: v.label, svg: svgEl });
+    }
+
+    return result;
+}
+
 export async function process() {
     try {
+        updateWfsExportState(false); // disable export while processing
         const settings: Settings = parseSettings();
         // cancel old process & create new
         cancellationToken.isCancelled = true;
         cancellationToken = new CancellationToken();
         processResult = await GUIProcessManager.process(settings, cancellationToken);
+        updateWfsExportState(true);
         await updateOutput();
         const tabsOutput = M.Tabs.getInstance(document.getElementById("tabsOutput")!);
         tabsOutput.select("output-pane");
     } catch (e) {
-        log("Error: " + e.message + " at " + e.stack);
+        const err = e as Error;
+        updateWfsExportState(false);
+        log("Error: " + err.message + " at " + err.stack);
     }
 }
 

@@ -1,14 +1,16 @@
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
         function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
         function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
 define("common", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.CancellationToken = exports.delay = void 0;
     function delay(ms) {
         return __awaiter(this, void 0, void 0, function* () {
             if (typeof window !== "undefined") {
@@ -30,6 +32,7 @@ define("common", ["require", "exports"], function (require, exports) {
 define("random", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Random = void 0;
     class Random {
         constructor(seed) {
             if (typeof seed === "undefined") {
@@ -49,6 +52,7 @@ define("random", ["require", "exports"], function (require, exports) {
 define("lib/clustering", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.KMeans = exports.Vector = void 0;
     class Vector {
         constructor(values, weight = 1) {
             this.values = values;
@@ -151,6 +155,7 @@ define("lib/clustering", ["require", "exports"], function (require, exports) {
 define("lib/colorconversion", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.rgb2lab = exports.lab2rgb = exports.hslToRgb = exports.rgbToHsl = void 0;
     /**
       * Converts an RGB color value to HSL. Conversion formula
       * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
@@ -269,6 +274,7 @@ define("lib/colorconversion", ["require", "exports"], function (require, exports
 define("settings", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Settings = exports.ClusteringColorSpace = void 0;
     var ClusteringColorSpace;
     (function (ClusteringColorSpace) {
         ClusteringColorSpace[ClusteringColorSpace["RGB"] = 0] = "RGB";
@@ -298,6 +304,7 @@ define("settings", ["require", "exports"], function (require, exports) {
 define("structs/typedarrays", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.BooleanArray2D = exports.Uint8Array2D = exports.Uint32Array2D = void 0;
     class Uint32Array2D {
         constructor(width, height) {
             this.width = width;
@@ -351,6 +358,7 @@ define("structs/typedarrays", ["require", "exports"], function (require, exports
 define("colorreductionmanagement", ["require", "exports", "common", "lib/clustering", "lib/colorconversion", "settings", "structs/typedarrays", "random"], function (require, exports, common_1, clustering_1, colorconversion_1, settings_1, typedarrays_1, random_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.ColorReducer = exports.ColorMapResult = void 0;
     class ColorMapResult {
     }
     exports.ColorMapResult = ColorMapResult;
@@ -431,10 +439,10 @@ define("colorreductionmanagement", ["require", "exports", "common", "lib/cluster
                         data = rgb;
                     }
                     else if (settings.kMeansClusteringColorSpace === settings_1.ClusteringColorSpace.HSL) {
-                        data = colorconversion_1.rgbToHsl(rgb[0], rgb[1], rgb[2]);
+                        data = (0, colorconversion_1.rgbToHsl)(rgb[0], rgb[1], rgb[2]);
                     }
                     else if (settings.kMeansClusteringColorSpace === settings_1.ClusteringColorSpace.LAB) {
-                        data = colorconversion_1.rgb2lab(rgb);
+                        data = (0, colorconversion_1.rgb2lab)(rgb);
                     }
                     else {
                         data = rgb;
@@ -445,7 +453,7 @@ define("colorreductionmanagement", ["require", "exports", "common", "lib/cluster
                     vec.tag = rgb;
                     vectors[vIdx++] = vec;
                 }
-                const random = new random_1.Random(settings.randomSeed);
+                const random = new random_1.Random(settings.randomSeed === 0 ? new Date().getTime() : settings.randomSeed);
                 // vectors of all the unique colors are built, time to cluster them
                 const kmeans = new clustering_1.KMeans(vectors, settings.kMeansNrOfClusters, random);
                 let curTime = new Date().getTime();
@@ -455,7 +463,7 @@ define("colorreductionmanagement", ["require", "exports", "common", "lib/cluster
                     // update GUI every 500ms
                     if (new Date().getTime() - curTime > 500) {
                         curTime = new Date().getTime();
-                        yield common_1.delay(0);
+                        yield (0, common_1.delay)(0);
                         if (onUpdate != null) {
                             ColorReducer.updateKmeansOutputImageData(kmeans, settings, pointsByColor, imgData, outputImgData, false);
                             onUpdate(kmeans);
@@ -485,11 +493,11 @@ define("colorreductionmanagement", ["require", "exports", "common", "lib/cluster
                     }
                     else if (settings.kMeansClusteringColorSpace === settings_1.ClusteringColorSpace.HSL) {
                         const hsl = centroid.values;
-                        rgb = colorconversion_1.hslToRgb(hsl[0], hsl[1], hsl[2]);
+                        rgb = (0, colorconversion_1.hslToRgb)(hsl[0], hsl[1], hsl[2]);
                     }
                     else if (settings.kMeansClusteringColorSpace === settings_1.ClusteringColorSpace.LAB) {
                         const lab = centroid.values;
-                        rgb = colorconversion_1.lab2rgb(lab);
+                        rgb = (0, colorconversion_1.lab2rgb)(lab);
                     }
                     else {
                         rgb = centroid.values;
@@ -503,13 +511,13 @@ define("colorreductionmanagement", ["require", "exports", "common", "lib/cluster
                             let closestRestrictedColor = null;
                             for (const color of settings.kMeansColorRestrictions) {
                                 // RGB distance is not very good for the human eye perception, convert both to lab and then calculate the distance
-                                const centroidLab = colorconversion_1.rgb2lab(rgb);
+                                const centroidLab = (0, colorconversion_1.rgb2lab)(rgb);
                                 let restrictionLab;
                                 if (typeof color === "string") {
-                                    restrictionLab = colorconversion_1.rgb2lab(settings.colorAliases[color]);
+                                    restrictionLab = (0, colorconversion_1.rgb2lab)(settings.colorAliases[color]);
                                 }
                                 else {
-                                    restrictionLab = colorconversion_1.rgb2lab(color);
+                                    restrictionLab = (0, colorconversion_1.rgb2lab)(color);
                                 }
                                 const distance = Math.sqrt((centroidLab[0] - restrictionLab[0]) * (centroidLab[0] - restrictionLab[0]) +
                                     (centroidLab[1] - restrictionLab[1]) * (centroidLab[1] - restrictionLab[1]) +
@@ -606,6 +614,7 @@ define("colorreductionmanagement", ["require", "exports", "common", "lib/cluster
 define("structs/point", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Point = void 0;
     class Point {
         constructor(x, y) {
             this.x = x;
@@ -629,6 +638,7 @@ define("structs/point", ["require", "exports"], function (require, exports) {
 define("structs/boundingbox", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.BoundingBox = void 0;
     class BoundingBox {
         constructor() {
             this.minX = Number.MAX_VALUE;
@@ -648,6 +658,7 @@ define("structs/boundingbox", ["require", "exports"], function (require, exports
 define("facetmanagement", ["require", "exports", "structs/point"], function (require, exports, point_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.FacetResult = exports.Facet = exports.PathPoint = exports.OrientationEnum = void 0;
     var OrientationEnum;
     (function (OrientationEnum) {
         OrientationEnum[OrientationEnum["Left"] = 0] = "Left";
@@ -770,6 +781,7 @@ define("facetmanagement", ["require", "exports", "structs/point"], function (req
 define("facetBorderSegmenter", ["require", "exports", "common", "structs/point", "facetmanagement"], function (require, exports, common_2, point_2, facetmanagement_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.FacetBorderSegmenter = exports.FacetBoundarySegment = exports.PathSegment = void 0;
     /**
      *  Path segment is a segment of a border path that is adjacent to a specific neighbour facet
      */
@@ -1072,7 +1084,7 @@ define("facetBorderSegmenter", ["require", "exports", "common", "structs/point",
                             segmentsPerFacet[f.id][s] = null;
                         }
                         if (count % 100 === 0) {
-                            yield common_2.delay(0);
+                            yield (0, common_2.delay)(0);
                             if (onUpdate != null) {
                                 onUpdate(f.id / facetResult.facets.length);
                             }
@@ -1091,6 +1103,7 @@ define("facetBorderSegmenter", ["require", "exports", "common", "structs/point",
 define("facetBorderTracer", ["require", "exports", "common", "structs/point", "structs/typedarrays", "facetmanagement"], function (require, exports, common_3, point_3, typedarrays_2, facetmanagement_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.FacetBorderTracer = void 0;
     class FacetBorderTracer {
         /**
          *  Traces the border path of the facet from the facet border points.
@@ -1148,7 +1161,7 @@ define("facetBorderTracer", ["require", "exports", "common", "structs/point", "s
                         const path = FacetBorderTracer.getPath(pt, facetResult, f, borderMask, xWall, yWall);
                         f.borderPath = path;
                         if (count % 100 === 0) {
-                            yield common_3.delay(0);
+                            yield (0, common_3.delay)(0);
                             if (onUpdate != null) {
                                 onUpdate(fidx / facetProcessingOrder.length);
                             }
@@ -1593,6 +1606,7 @@ define("facetBorderTracer", ["require", "exports", "common", "structs/point", "s
 define("lib/fill", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.fill = void 0;
     function fill(x, y, width, height, visited, setFill) {
         // at this point, we know array[y,x] is clear, and we want to move as far as possible to the upper-left. moving
         // up is much more important than moving left, so we could try to make this smarter by sometimes moving to
@@ -1680,6 +1694,7 @@ define("lib/fill", ["require", "exports"], function (require, exports) {
 define("facetReducer", ["require", "exports", "colorreductionmanagement", "common", "facetCreator", "structs/typedarrays"], function (require, exports, colorreductionmanagement_1, common_4, facetCreator_1, typedarrays_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.FacetReducer = void 0;
     class FacetReducer {
         /**
          *  Remove all facets that have a pointCount smaller than the given number.
@@ -1705,7 +1720,7 @@ define("facetReducer", ["require", "exports", "colorreductionmanagement", "commo
                         FacetReducer.deleteFacet(f.id, facetResult, imgColorIndices, colorDistances, visitedCache);
                         if (new Date().getTime() - curTime > 500) {
                             curTime = new Date().getTime();
-                            yield common_4.delay(0);
+                            yield (0, common_4.delay)(0);
                             if (onUpdate != null) {
                                 onUpdate(0.5 * fidx / facetProcessingOrder.length);
                             }
@@ -1729,7 +1744,7 @@ define("facetReducer", ["require", "exports", "colorreductionmanagement", "commo
                     facetCount = facetResult.facets.filter(f => f != null).length;
                     if (new Date().getTime() - curTime > 500) {
                         curTime = new Date().getTime();
-                        yield common_4.delay(0);
+                        yield (0, common_4.delay)(0);
                         if (onUpdate != null) {
                             onUpdate(0.5 + 0.5 - (facetCount - maximumNumberOfFacets) / (startFacetCount - maximumNumberOfFacets));
                         }
@@ -1970,6 +1985,7 @@ define("facetReducer", ["require", "exports", "colorreductionmanagement", "commo
 define("facetCreator", ["require", "exports", "common", "lib/fill", "structs/boundingbox", "structs/point", "structs/typedarrays", "facetmanagement"], function (require, exports, common_5, fill_1, boundingbox_1, point_4, typedarrays_4, facetmanagement_3) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.FacetCreator = void 0;
     class FacetCreator {
         /**
          *  Constructs the facets with its border points for each area of pixels of the same color
@@ -1995,7 +2011,7 @@ define("facetCreator", ["require", "exports", "common", "lib/fill", "structs/bou
                             const facet = FacetCreator.buildFacet(facetIndex, colorIndex, i, j, visited, imgColorIndices, result);
                             result.facets.push(facet);
                             if (count % 100 === 0) {
-                                yield common_5.delay(0);
+                                yield (0, common_5.delay)(0);
                                 if (onUpdate != null) {
                                     onUpdate(count / (result.width * result.height));
                                 }
@@ -2004,7 +2020,7 @@ define("facetCreator", ["require", "exports", "common", "lib/fill", "structs/bou
                         count++;
                     }
                 }
-                yield common_5.delay(0);
+                yield (0, common_5.delay)(0);
                 // fill in the neighbours of all facets by checking the neighbours of the border points
                 for (const f of result.facets) {
                     if (f != null) {
@@ -2028,7 +2044,7 @@ define("facetCreator", ["require", "exports", "common", "lib/fill", "structs/bou
             facet.borderPoints = [];
             facet.neighbourFacetsIsDirty = true; // not built neighbours yet
             facet.neighbourFacets = null;
-            fill_1.fill(x, y, facetResult.width, facetResult.height, (ptx, pty) => visited.get(ptx, pty) || imgColorIndices.get(ptx, pty) !== facetColorIndex, (ptx, pty) => {
+            (0, fill_1.fill)(x, y, facetResult.width, facetResult.height, (ptx, pty) => visited.get(ptx, pty) || imgColorIndices.get(ptx, pty) !== facetColorIndex, (ptx, pty) => {
                 visited.set(ptx, pty, true);
                 facetResult.facetMap.set(ptx, pty, facetIndex);
                 facet.pointCount++;
@@ -2150,6 +2166,7 @@ define("facetCreator", ["require", "exports", "common", "lib/fill", "structs/bou
 define("lib/datastructs", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.PriorityQueue = exports.Map = void 0;
     class Map {
         constructor() {
             this.obj = {};
@@ -2401,6 +2418,7 @@ define("lib/datastructs", ["require", "exports"], function (require, exports) {
 define("lib/polylabel", ["require", "exports", "lib/datastructs"], function (require, exports, datastructs_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.pointToPolygonDist = exports.polylabel = void 0;
     function polylabel(polygon, precision = 1.0) {
         // find the bounding box of the outer ring
         let minX = Number.MAX_VALUE;
@@ -2547,6 +2565,7 @@ define("lib/polylabel", ["require", "exports", "lib/datastructs"], function (req
 define("facetLabelPlacer", ["require", "exports", "common", "lib/polylabel", "structs/boundingbox", "facetCreator"], function (require, exports, common_6, polylabel_1, boundingbox_2, facetCreator_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.FacetLabelPlacer = void 0;
     class FacetLabelPlacer {
         /**
          *  Determines where to place the labels for each facet. This is done by calculating where
@@ -2580,7 +2599,7 @@ define("facetLabelPlacer", ["require", "exports", "common", "lib/polylabel", "st
                                 polyRings.push(neighbourPath);
                             }
                         }
-                        const result = polylabel_1.polylabel(polyRings);
+                        const result = (0, polylabel_1.polylabel)(polyRings);
                         f.labelBounds = new boundingbox_2.BoundingBox();
                         // determine inner square within the circle
                         const innerPadding = 2 * Math.sqrt(2 * result.distance);
@@ -2589,7 +2608,7 @@ define("facetLabelPlacer", ["require", "exports", "common", "lib/polylabel", "st
                         f.labelBounds.minY = result.pt.y - innerPadding;
                         f.labelBounds.maxY = result.pt.y + innerPadding;
                         if (count % 100 === 0) {
-                            yield common_6.delay(0);
+                            yield (0, common_6.delay)(0);
                             if (onUpdate != null) {
                                 onUpdate(f.id / facetResult.facets.length);
                             }
@@ -2620,7 +2639,7 @@ define("facetLabelPlacer", ["require", "exports", "common", "lib/polylabel", "st
             if (fallsInside) {
                 // do a more fine grained but more expensive check to see if each of the points fall within the polygon
                 for (let i = 0; i < neighbourPath.length && fallsInside; i++) {
-                    const distance = polylabel_1.pointToPolygonDist(neighbourPath[i].x, neighbourPath[i].y, onlyOuterRing);
+                    const distance = (0, polylabel_1.pointToPolygonDist)(neighbourPath[i].x, neighbourPath[i].y, onlyOuterRing);
                     if (distance < 0) {
                         // falls outside
                         fallsInside = false;
@@ -2638,6 +2657,7 @@ define("facetLabelPlacer", ["require", "exports", "common", "lib/polylabel", "st
 define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "common", "facetBorderSegmenter", "facetBorderTracer", "facetCreator", "facetLabelPlacer", "facetmanagement", "facetReducer", "gui", "structs/point"], function (require, exports, colorreductionmanagement_2, common_7, facetBorderSegmenter_1, facetBorderTracer_1, facetCreator_3, facetLabelPlacer_1, facetmanagement_4, facetReducer_1, gui_1, point_5) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.GUIProcessManager = exports.ProcessResult = void 0;
     class ProcessResult {
     }
     exports.ProcessResult = ProcessResult;
@@ -2716,7 +2736,7 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
         }
         static processKmeansClustering(imgData, tabsOutput, ctx, settings, cancellationToken) {
             return __awaiter(this, void 0, void 0, function* () {
-                gui_1.time("K-means clustering");
+                (0, gui_1.time)("K-means clustering");
                 const cKmeans = document.getElementById("cKMeans");
                 cKmeans.width = imgData.width;
                 cKmeans.height = imgData.height;
@@ -2737,13 +2757,13 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                 });
                 $(".status").removeClass("active");
                 $(".status.kMeans").addClass("complete");
-                gui_1.timeEnd("K-means clustering");
+                (0, gui_1.timeEnd)("K-means clustering");
                 return kmeansImgData;
             });
         }
         static processFacetBuilding(colormapResult, cancellationToken) {
             return __awaiter(this, void 0, void 0, function* () {
-                gui_1.time("Facet building");
+                (0, gui_1.time)("Facet building");
                 $(".status.facetBuilding").addClass("active");
                 const facetResult = yield facetCreator_3.FacetCreator.getFacets(colormapResult.width, colormapResult.height, colormapResult.imgColorIndices, (progress) => {
                     if (cancellationToken.isCancelled) {
@@ -2753,13 +2773,13 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                 });
                 $(".status").removeClass("active");
                 $(".status.facetBuilding").addClass("complete");
-                gui_1.timeEnd("Facet building");
+                (0, gui_1.timeEnd)("Facet building");
                 return facetResult;
             });
         }
         static processFacetReduction(facetResult, tabsOutput, settings, colormapResult, cancellationToken) {
             return __awaiter(this, void 0, void 0, function* () {
-                gui_1.time("Facet reduction");
+                (0, gui_1.time)("Facet reduction");
                 const cReduction = document.getElementById("cReduction");
                 cReduction.width = facetResult.width;
                 cReduction.height = facetResult.height;
@@ -2790,12 +2810,12 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                 });
                 $(".status").removeClass("active");
                 $(".status.facetReduction").addClass("complete");
-                gui_1.timeEnd("Facet reduction");
+                (0, gui_1.timeEnd)("Facet reduction");
             });
         }
         static processFacetBorderTracing(tabsOutput, facetResult, cancellationToken) {
             return __awaiter(this, void 0, void 0, function* () {
-                gui_1.time("Facet border tracing");
+                (0, gui_1.time)("Facet border tracing");
                 tabsOutput.select("borderpath-pane");
                 const cBorderPath = document.getElementById("cBorderPath");
                 cBorderPath.width = facetResult.width;
@@ -2823,12 +2843,12 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                 });
                 $(".status").removeClass("active");
                 $(".status.facetBorderPath").addClass("complete");
-                gui_1.timeEnd("Facet border tracing");
+                (0, gui_1.timeEnd)("Facet border tracing");
             });
         }
         static processFacetBorderSegmentation(facetResult, tabsOutput, settings, cancellationToken) {
             return __awaiter(this, void 0, void 0, function* () {
-                gui_1.time("Facet border segmentation");
+                (0, gui_1.time)("Facet border segmentation");
                 const cBorderSegment = document.getElementById("cBorderSegmentation");
                 cBorderSegment.width = facetResult.width;
                 cBorderSegment.height = facetResult.height;
@@ -2857,13 +2877,13 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                 });
                 $(".status").removeClass("active");
                 $(".status.facetBorderSegmentation").addClass("complete");
-                gui_1.timeEnd("Facet border segmentation");
+                (0, gui_1.timeEnd)("Facet border segmentation");
                 return cBorderSegment;
             });
         }
         static processFacetLabelPlacement(facetResult, cBorderSegment, tabsOutput, cancellationToken) {
             return __awaiter(this, void 0, void 0, function* () {
-                gui_1.time("Facet label placement");
+                (0, gui_1.time)("Facet label placement");
                 const cLabelPlacement = document.getElementById("cLabelPlacement");
                 cLabelPlacement.width = facetResult.width;
                 cLabelPlacement.height = facetResult.height;
@@ -2888,7 +2908,7 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                 });
                 $(".status").removeClass("active");
                 $(".status.facetLabelPlacement").addClass("complete");
-                gui_1.timeEnd("Facet label placement");
+                (0, gui_1.timeEnd)("Facet label placement");
             });
         }
         /**
@@ -3001,7 +3021,7 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
                             svg.appendChild(g);
                         }
                         if (count % 100 === 0) {
-                            yield common_7.delay(0);
+                            yield (0, common_7.delay)(0);
                             if (onUpdate != null) {
                                 onUpdate(f.id / facetResult.facets.length);
                             }
@@ -3024,8 +3044,19 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
 define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"], function (require, exports, common_8, guiprocessmanager_1, settings_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.loadExample = exports.downloadSVG = exports.downloadPNG = exports.downloadPalettePng = exports.updateOutput = exports.process = exports.createWfsExportSvgs = exports.getProcessResult = exports.parseSettings = exports.log = exports.timeEnd = exports.time = void 0;
     let processResult = null;
     let cancellationToken = new common_8.CancellationToken();
+    function updateWfsExportState(enabled) {
+        if (typeof window !== "undefined") {
+            window.__wfsExportReady = !!enabled;
+        }
+        const exportBtn = document.getElementById("btnExportWFS");
+        if (exportBtn) {
+            exportBtn.disabled = !enabled;
+            exportBtn.classList.toggle("disabled", !enabled);
+        }
+    }
     const timers = {};
     function time(name) {
         console.time(name);
@@ -3103,20 +3134,50 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
         return settings;
     }
     exports.parseSettings = parseSettings;
+    function getProcessResult() {
+        return processResult;
+    }
+    exports.getProcessResult = getProcessResult;
+    function createWfsExportSvgs(sizeMultiplier, fontSize, fontColor) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (processResult == null) {
+                throw new Error('No processed result available');
+            }
+            const variants = [
+                { label: 'BW_Numbers', fill: false, stroke: true, labels: true },
+                { label: 'BW_Outline', fill: false, stroke: true, labels: false },
+                { label: 'Colour_Reference', fill: true, stroke: false, labels: false },
+                { label: 'Colour_Numbers', fill: true, stroke: false, labels: true },
+                { label: 'Colour_Numbers_Outline', fill: true, stroke: true, labels: true }
+            ];
+            const result = [];
+            for (const v of variants) {
+                // Reuse the same processed facet result and colorsByIndex for each variant
+                const svgEl = yield guiprocessmanager_1.GUIProcessManager.createSVG(processResult.facetResult, processResult.colorsByIndex, sizeMultiplier, v.fill, v.stroke, v.labels, fontSize, fontColor);
+                result.push({ label: v.label, svg: svgEl });
+            }
+            return result;
+        });
+    }
+    exports.createWfsExportSvgs = createWfsExportSvgs;
     function process() {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                updateWfsExportState(false); // disable export while processing
                 const settings = parseSettings();
                 // cancel old process & create new
                 cancellationToken.isCancelled = true;
                 cancellationToken = new common_8.CancellationToken();
                 processResult = yield guiprocessmanager_1.GUIProcessManager.process(settings, cancellationToken);
+                updateWfsExportState(true);
                 yield updateOutput();
                 const tabsOutput = M.Tabs.getInstance(document.getElementById("tabsOutput"));
                 tabsOutput.select("output-pane");
             }
             catch (e) {
-                log("Error: " + e.message + " at " + e.stack);
+                const err = e;
+                updateWfsExportState(false);
+                log("Error: " + err.message + " at " + err.stack);
             }
         });
     }
@@ -3250,6 +3311,7 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
 define("lib/clipboard", ["require", "exports"], function (require, exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.Clipboard = void 0;
     // From https://stackoverflow.com/a/35576409/694640
     /**
      * image pasting into canvas
@@ -3422,11 +3484,11 @@ define("main", ["require", "exports", "gui", "lib/clipboard"], function (require
                 reader.readAsDataURL(files[0]);
             }
         });
-        gui_2.loadExample("imgSmall");
+        (0, gui_2.loadExample)("imgSmall");
         $("#btnProcess").click(function () {
             return __awaiter(this, void 0, void 0, function* () {
                 try {
-                    yield gui_2.process();
+                    yield (0, gui_2.process)();
                 }
                 catch (err) {
                     alert("Error: " + err);
@@ -3434,19 +3496,19 @@ define("main", ["require", "exports", "gui", "lib/clipboard"], function (require
             });
         });
         $("#chkShowLabels, #chkFillFacets, #chkShowBorders, #txtSizeMultiplier, #txtLabelFontSize, #txtLabelFontColor").change(() => __awaiter(this, void 0, void 0, function* () {
-            yield gui_2.updateOutput();
+            yield (0, gui_2.updateOutput)();
         }));
         $("#btnDownloadSVG").click(function () {
-            gui_2.downloadSVG();
+            (0, gui_2.downloadSVG)();
         });
         $("#btnDownloadPNG").click(function () {
-            gui_2.downloadPNG();
+            (0, gui_2.downloadPNG)();
         });
         $("#btnDownloadPalettePNG").click(function () {
-            gui_2.downloadPalettePng();
+            (0, gui_2.downloadPalettePng)();
         });
-        $("#lnkTrivial").click(() => { gui_2.loadExample("imgTrivial"); return false; });
-        $("#lnkSmall").click(() => { gui_2.loadExample("imgSmall"); return false; });
-        $("#lnkMedium").click(() => { gui_2.loadExample("imgMedium"); return false; });
+        $("#lnkTrivial").click(() => { (0, gui_2.loadExample)("imgTrivial"); return false; });
+        $("#lnkSmall").click(() => { (0, gui_2.loadExample)("imgSmall"); return false; });
+        $("#lnkMedium").click(() => { (0, gui_2.loadExample)("imgMedium"); return false; });
     });
 });

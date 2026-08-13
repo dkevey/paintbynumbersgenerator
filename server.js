@@ -13,11 +13,135 @@ const PORT = process.env.PORT || 3000;
 const REPO_ROOT = path.resolve(__dirname);
 const OUT_ROOT = path.join(REPO_ROOT, 'out');
 
+function ensureWfsProductStructure(productFolder) {
+    const pngDir = path.join(productFolder, 'PNG');
+    const svgDir = path.join(productFolder, 'SVG');
+    const procreateDir = path.join(productFolder, 'PROCREATE');
+    const shopDir = path.join(productFolder, '_Shop');
+    const shopCanvaDir = path.join(shopDir, 'Canva');
+    const shopListingDir = path.join(shopDir, 'Listing images');
+    const shopSocialDir = path.join(shopDir, 'Social Media');
+
+    fs.mkdirSync(pngDir, { recursive: true });
+    fs.mkdirSync(svgDir, { recursive: true });
+    fs.mkdirSync(procreateDir, { recursive: true });
+    fs.mkdirSync(shopCanvaDir, { recursive: true });
+    fs.mkdirSync(shopListingDir, { recursive: true });
+    fs.mkdirSync(shopSocialDir, { recursive: true });
+}
+
+function sanitizeProductName(productNameRaw) {
+    const base = sanitize(productNameRaw || '').trim();
+    const sanitized = (base || 'untitled').replace(/\s+/g, '-');
+    return sanitized.replace(/[^A-Za-z0-9_-]/g, '');
+}
+
+function moveUploadedFile(source, target) {
+    try {
+        fs.renameSync(source, target);
+    } catch (error) {
+        if (error && (error.code === 'EXDEV' || error.code === 'ENOTSUP')) {
+            fs.copyFileSync(source, target);
+            fs.unlinkSync(source);
+            return;
+        }
+        throw error;
+    }
+}
+
 // serve existing static site
 app.use(express.static(REPO_ROOT));
 
 // expose job folders under /jobs/<job> -> maps to out/<job>
 app.use('/jobs', express.static(OUT_ROOT));
+
+app.post('/api/export-wfs', upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'svgFiles', maxCount: 20 },
+    { name: 'pngFiles', maxCount: 20 },
+    { name: 'baseJson', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const productNameRaw = req.body.productName || req.body.productname || req.body.name;
+        const sanitized = sanitizeProductName(productNameRaw);
+        if (!sanitized || sanitized === 'untitled') {
+            return res.status(400).json({ success: false, error: 'Product Name is required' });
+        }
+
+        const productFolderName = `WFS_${sanitized}`;
+        const productFolder = path.join(OUT_ROOT, productFolderName);
+        if (fs.existsSync(productFolder)) {
+            return res.status(409).json({ success: false, error: `Product folder already exists: ${productFolderName}` });
+        }
+
+        fs.mkdirSync(productFolder, { recursive: true });
+        ensureWfsProductStructure(productFolder);
+
+        const imageFile = req.files && req.files.image && req.files.image[0];
+        if (!imageFile) {
+            fs.rmSync(productFolder, { recursive: true, force: true });
+            return res.status(400).json({ success: false, error: 'Original image is required' });
+        }
+
+        const originalExt = path.extname(imageFile.originalname || '') || '.png';
+        const originalName = `WFS_${sanitized}_Original_Image${originalExt}`;
+        const originalTarget = path.join(productFolder, originalName);
+        moveUploadedFile(imageFile.path, originalTarget);
+
+        const svgFiles = req.files && req.files.svgFiles ? req.files.svgFiles : [];
+        const pngFiles = req.files && req.files.pngFiles ? req.files.pngFiles : [];
+
+        for (const file of svgFiles) {
+            const target = path.join(productFolder, 'SVG', file.originalname || path.basename(file.path));
+            moveUploadedFile(file.path, target);
+        }
+        for (const file of pngFiles) {
+            const target = path.join(productFolder, 'PNG', file.originalname || path.basename(file.path));
+            moveUploadedFile(file.path, target);
+        }
+
+        let baseJsonSource = req.body.baseJson;
+        if (!baseJsonSource && req.files && req.files.baseJson && req.files.baseJson[0]) {
+            baseJsonSource = fs.readFileSync(req.files.baseJson[0].path, 'utf8');
+        }
+
+        if (!baseJsonSource) {
+            const defaultBaseJson = {
+                productName: sanitized,
+                generatedBy: 'browser-wfs-export',
+                createdAt: new Date().toISOString(),
+                originalImage: originalName,
+                variants: [
+                    'WFS_' + sanitized + '_BW_Numbers',
+                    'WFS_' + sanitized + '_BW_Outline',
+                    'WFS_' + sanitized + '_Colour_Reference',
+                    'WFS_' + sanitized + '_Colour_Numbers',
+                    'WFS_' + sanitized + '_Colour_Numbers_Outline'
+                ]
+            };
+            baseJsonSource = JSON.stringify(defaultBaseJson, null, 2);
+        }
+
+        const baseJsonPath = path.join(productFolder, 'base.json');
+        fs.writeFileSync(baseJsonPath, typeof baseJsonSource === 'string' ? baseJsonSource : JSON.stringify(baseJsonSource, null, 2), 'utf8');
+
+        const fileLinks = [];
+        const svgDir = path.join(productFolder, 'SVG');
+        const pngDir = path.join(productFolder, 'PNG');
+        for (const file of fs.readdirSync(svgDir)) {
+            fileLinks.push({ name: file, url: `/jobs/${productFolderName}/SVG/${encodeURIComponent(file)}` });
+        }
+        for (const file of fs.readdirSync(pngDir)) {
+            fileLinks.push({ name: file, url: `/jobs/${productFolderName}/PNG/${encodeURIComponent(file)}` });
+        }
+        fileLinks.push({ name: originalName, url: `/jobs/${productFolderName}/${encodeURIComponent(originalName)}` });
+        fileLinks.push({ name: 'base.json', url: `/jobs/${productFolderName}/base.json` });
+
+        return res.json({ success: true, job: productFolderName, files: fileLinks });
+    } catch (err) {
+        return res.status(500).json({ success: false, error: err && err.message ? err.message : 'Unknown error' });
+    }
+});
 
 app.post('/api/generate', upload.single('image'), async (req, res) => {
     try {
