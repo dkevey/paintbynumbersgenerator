@@ -16,6 +16,18 @@
             <span>Paste from clipboard (ctrl+v) to change the image (or browse for a file <input id="file" type="file"
                     accept="image/x-png,image/gif,image/jpeg"></input>). Large images are very slow to process
                 though.</span>
+            <br/>
+            <div style="margin-top:8px;">
+                <div class="input-field inline" style="width:40%;">
+                    <input id="txtProductName" type="text" class="validate" />
+                    <label for="txtProductName">Product Name</label>
+                </div>
+                <div class="input-field inline" style="width:20%; margin-left:12px;">
+                    <input id="txtNrOfColours" type="number" value="30" min="1" class="validate" />
+                    <label for="txtNrOfColours">Number of Colours</label>
+                </div>
+                <a class="waves-effect waves-light btn" id="btnGenerateWFS" style="margin-left:12px; vertical-align:bottom;">Generate WFS Files</a>
+            </div>
             <br />
             <span>Example images:
                 <a id="lnkTrivial" href="#">trivial</a> -
@@ -414,6 +426,7 @@
     <script src="scripts/lib/jquery-1.11.0.min.js"></script>
     <script src="scripts/lib/materialize.min.js"></script>
     <script src='scripts/main.js'></script>
+    <script src='scripts/wfs-client.js'></script>
     <script>
         requirejs(['main'], function (MyApp) {
 

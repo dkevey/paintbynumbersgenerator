@@ -70,6 +70,15 @@ async function main() {
 
     const settings: CLISettings = require(configPath);
 
+    // CLI override for number of colours per run (do not persist to settings.json)
+    if (typeof args.colours !== "undefined") {
+        const parsed = parseInt(args.colours + "", 10);
+        if (!isNaN(parsed) && parsed > 0) {
+            settings.kMeansNrOfClusters = parsed;
+            console.log(`Overriding number of colours to ${parsed} for this run`);
+        }
+    }
+
     const img = await canvas.loadImage(imagePath);
     const c = canvas.createCanvas(img.width, img.height);
     const ctx = c.getContext("2d");
