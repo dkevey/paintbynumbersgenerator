@@ -1,5 +1,6 @@
 node_modules
 *.js
+!scripts/lib/fflate.min.js
 *.map
 .DS_Store
 out/

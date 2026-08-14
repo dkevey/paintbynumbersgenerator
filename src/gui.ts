@@ -15,10 +15,13 @@ function updateWfsExportState(enabled: boolean) {
     if (typeof window !== "undefined") {
         (window as any).__wfsExportReady = !!enabled;
     }
-    const exportBtn = document.getElementById("btnExportWFS") as HTMLButtonElement | null;
-    if (exportBtn) {
-        exportBtn.disabled = !enabled;
-        exportBtn.classList.toggle("disabled", !enabled);
+    const exportButtonIds = ["btnDownloadWFSZip", "btnExportWFS"];
+    for (const buttonId of exportButtonIds) {
+        const exportBtn = document.getElementById(buttonId) as HTMLButtonElement | null;
+        if (exportBtn) {
+            exportBtn.disabled = !enabled;
+            exportBtn.classList.toggle("disabled", !enabled);
+        }
     }
 }
 

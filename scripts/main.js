@@ -3051,10 +3051,13 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
         if (typeof window !== "undefined") {
             window.__wfsExportReady = !!enabled;
         }
-        const exportBtn = document.getElementById("btnExportWFS");
-        if (exportBtn) {
-            exportBtn.disabled = !enabled;
-            exportBtn.classList.toggle("disabled", !enabled);
+        const exportButtonIds = ["btnDownloadWFSZip", "btnExportWFS"];
+        for (const buttonId of exportButtonIds) {
+            const exportBtn = document.getElementById(buttonId);
+            if (exportBtn) {
+                exportBtn.disabled = !enabled;
+                exportBtn.classList.toggle("disabled", !enabled);
+            }
         }
     }
     const timers = {};

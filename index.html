@@ -217,7 +217,9 @@
 
             <div class="col s12">
                 <a class="waves-effect waves-light btn" id="btnProcess">Process image</a>
-                <a class="waves-effect waves-light btn disabled" id="btnExportWFS" style="margin-left:12px;">Export WFS Files</a>
+                <a class="waves-effect waves-light btn disabled" id="btnDownloadWFSZip" style="margin-left:12px;">Export WFS ZIP</a>
+                <a class="waves-effect waves-light btn disabled" id="btnExportWFS" style="margin-left:12px;">Export to Local Folder</a>
+                <div id="wfsZipDownload" style="display:none; margin-top:12px;"></div>
             </div>
         </div>
 
@@ -418,6 +420,7 @@
     </div>
 
     <script src="scripts/lib/saveSvgAsPng.js"></script>
+    <script src='scripts/lib/fflate.min.js'></script>
     <script src="scripts/lib/require.js"></script>
     <script src="scripts/lib/jquery-1.11.0.min.js"></script>
     <script src="scripts/lib/materialize.min.js"></script>
