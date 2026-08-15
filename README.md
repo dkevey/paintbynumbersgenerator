@@ -1,11 +1,11 @@
-# Paint by numbers generator
-Generate paint by number images (vectorized with SVG) from any input image.
+# Wattle Fern Studio Paint by Numbers Generator
+Generate paint-by-numbers artwork, including SVG output, from an input image.
 
-*** This project was a proof of concept for fun back in the day, it is not being actively maintained but feel free to fork and make your own changes.  ***
+This is Wattle Fern Studio's version of the original open-source Paint by Numbers Generator. The original Git history and MIT licence are retained.
 
 ## Demo
 
-Try it out [here](https://drake7707.github.io/paintbynumbersgenerator/index.html)
+A hosted Wattle Fern Studio version is planned. For now, follow the local setup instructions below.
 
 ### CLI Version
 
