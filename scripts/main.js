@@ -3272,7 +3272,7 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
             canvas.width = canvasWidth;
             canvas.height = headerHeight + nrRows * rowHeight + footerHeight;
             const ctx = canvas.getContext("2d");
-            ctx.fillStyle = "#D2BDAF";
+            ctx.fillStyle = "#cfbaab";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = "#5E3F24";
             ctx.font = "72px Roboto, Arial, sans-serif";
