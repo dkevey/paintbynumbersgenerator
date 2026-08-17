@@ -77,7 +77,7 @@
                     <li class="collection-item">
                         <div class="row">
                             <div class="input-field col s2">
-                                <input id="txtNrOfClusters" type="number" value="30" min="1" class="validate">
+                                <input id="txtNrOfClusters" type="number" value="24" min="1" class="validate">
                                 <label for="txtNrOfClusters">Number of colors
                                     <i class="material-icons tooltipped"
                                         data-tooltip="The number of colors to quantize the image to">info</i>
@@ -146,7 +146,7 @@
                     <li class="collection-item">
                         <div class="row">
                             <div class="input-field col s4">
-                                <input id="txtNarrowPixelStripCleanupRuns" type="number" value="3" min="0"
+                                <input id="txtNarrowPixelStripCleanupRuns" type="number" value="4" min="0"
                                     class="validate">
                                 <label for="txtNarrowPixelStripCleanupRuns">Number of runs for narrow pixel cleanup
                                     <i class="material-icons tooltipped"
@@ -154,7 +154,7 @@
                                 </label>
                             </div>
                             <div class="input-field col s4">
-                                <input id="txtRemoveFacetsSmallerThan" type="number" value="20" min="1"
+                                <input id="txtRemoveFacetsSmallerThan" type="number" value="40" min="1"
                                     class="validate">
                                 <label for="txtRemoveFacetsSmallerThan">Remove small facets smaller than (pixels)
                                     <i class="material-icons tooltipped"
@@ -182,14 +182,14 @@
                                     <div class="col s4">
                                         <label>
                                             <input id="optFacetRemovalLargestToSmallest" name="smallfacetremovalorder"
-                                                type="radio" checked />
+                                                type="radio" />
                                             <span>Largest to smallest</span>
                                         </label>
                                     </div>
                                     <div class="col s4">
                                         <label>
                                             <input id="optFacetRemovalSmallestToLargest" name="smallfacetremovalorder"
-                                                type="radio" />
+                                                type="radio" checked />
                                             <span>Smallest to largest</span>
                                         </label>
                                     </div>
