@@ -11,6 +11,12 @@ $(document).ready(function () {
     $("#file").change(function (ev) {
         const files = (<HTMLInputElement>$("#file").get(0)).files;
         if (files !== null && files.length > 0) {
+            const productNameInput = $("#txtProductName");
+            if ((productNameInput.val() + "").trim() === "") {
+                productNameInput.val(files[0].name.replace(/\.[^/.]+$/, "")).trigger("input");
+                M.updateTextFields();
+            }
+
             const reader = new FileReader();
             reader.onloadend = function () {
                 const img = document.createElement("img");
