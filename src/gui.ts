@@ -186,49 +186,106 @@ function createPaletteHtml(colorsByIndex: RGB[]) {
     return $(html);
 }
 
-function createPaletteCanvas(colorsByIndex: RGB[]): HTMLCanvasElement {
+function rgbToHex(color: RGB): string {
+    return "#" + color.map((value) => Math.round(value).toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+function drawRoundedRectangle(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}
+
+function drawCenteredTextWithLetterSpacing(ctx: CanvasRenderingContext2D, text: string, centerX: number, y: number, letterSpacing: number) {
+    const characters = Array.from(text);
+    const textWidth = characters.reduce((width, character) => width + ctx.measureText(character).width, 0);
+    const totalWidth = textWidth + Math.max(0, characters.length - 1) * letterSpacing;
+    let x = centerX - totalWidth / 2;
+
+    ctx.textAlign = "left";
+    for (const character of characters) {
+        ctx.fillText(character, x, y);
+        x += ctx.measureText(character).width + letterSpacing;
+    }
+    ctx.textAlign = "center";
+}
+
+function loadPaletteLogo(): Promise<HTMLImageElement> {
+    return new Promise<HTMLImageElement>((resolve, reject) => {
+        const logo = new Image();
+        logo.onload = () => resolve(logo);
+        logo.onerror = () => reject(new Error("Unable to load the Wattle Fern Studio palette logo"));
+        logo.src = "assets/WFS-Colour-Palette.svg";
+    });
+}
+
+async function createPaletteCanvas(colorsByIndex: RGB[]): Promise<HTMLCanvasElement> {
     const canvas = document.createElement("canvas");
 
-    const nrOfItemsPerRow = 10;
+    const nrOfItemsPerRow = 5;
     const nrRows = Math.ceil(colorsByIndex.length / nrOfItemsPerRow);
-    const margin = 10;
-    const cellWidth = 80;
-    const cellHeight = 70;
+    const canvasWidth = 1200;
+    const headerHeight = 210;
+    const footerHeight = 190;
+    const rowHeight = 235;
+    const swatchSize = 150;
+    const columnGap = 50;
+    const paletteWidth = nrOfItemsPerRow * swatchSize + (nrOfItemsPerRow - 1) * columnGap;
+    const paletteLeft = (canvasWidth - paletteWidth) / 2;
 
-    canvas.width = margin + nrOfItemsPerRow * (cellWidth + margin);
-    canvas.height = margin + nrRows * (cellHeight + margin);
+    canvas.width = canvasWidth;
+    canvas.height = headerHeight + nrRows * rowHeight + footerHeight;
     const ctx = canvas.getContext("2d")!;
-    ctx.translate(0.5, 0.5);
 
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "#D2BDAF";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#5E3F24";
+    ctx.font = "72px Roboto, Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(94, 63, 36, 0.35)";
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 3;
+    drawCenteredTextWithLetterSpacing(ctx, "Colour Palette", canvas.width / 2, 105, 3);
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
     for (let i = 0; i < colorsByIndex.length; i++) {
         const color = colorsByIndex[i];
 
-        const x = margin + (i % nrOfItemsPerRow) * (cellWidth + margin);
-        const y = margin + Math.floor(i / nrOfItemsPerRow) * (cellHeight + margin);
+        const x = paletteLeft + (i % nrOfItemsPerRow) * (swatchSize + columnGap);
+        const y = headerHeight + Math.floor(i / nrOfItemsPerRow) * rowHeight;
 
         ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
-        ctx.fillRect(x, y, cellWidth, cellHeight - 20);
-        ctx.strokeStyle = "#888";
-        ctx.strokeRect(x, y, cellWidth, cellHeight - 20);
+        drawRoundedRectangle(ctx, x, y, swatchSize, swatchSize, 22);
+        ctx.fill();
 
-        const nrText = i + "";
-        ctx.fillStyle = "black";
-        ctx.strokeStyle = "#CCC";
-        ctx.font = "20px Tahoma";
-        const nrTextSize = ctx.measureText(nrText);
-        ctx.lineWidth = 2;
-        ctx.strokeText(nrText, x + cellWidth / 2 - nrTextSize.width / 2, y + cellHeight / 2 - 5);
-        ctx.fillText(nrText, x + cellWidth / 2 - nrTextSize.width / 2, y + cellHeight / 2 - 5);
-        ctx.lineWidth = 1;
+        ctx.fillStyle = "white";
+        ctx.font = "bold 38px Arial, sans-serif";
+        ctx.fillText(i + "", x + swatchSize / 2, y + swatchSize / 2);
 
-        ctx.font = "10px Tahoma";
-        const rgbText = "RGB: " + Math.floor(color[0]) + "," + Math.floor(color[1]) + "," + Math.floor(color[2]);
-        const rgbTextSize = ctx.measureText(rgbText);
-        ctx.fillStyle = "black";
-        ctx.fillText(rgbText, x + cellWidth / 2 - rgbTextSize.width / 2, y + cellHeight - 10);
+        ctx.font = "22px Arial, sans-serif";
+        ctx.fillStyle = "#161616";
+        ctx.fillText(rgbToHex(color), x + swatchSize / 2, y + swatchSize + 35);
     }
+
+    const logo = await loadPaletteLogo();
+    const logoWidth = 560;
+    const logoHeight = logoWidth * logo.naturalHeight / logo.naturalWidth;
+    const logoY = canvas.height - footerHeight + (footerHeight - logoHeight) / 2;
+    ctx.drawImage(logo, (canvas.width - logoWidth) / 2, logoY, logoWidth, logoHeight);
 
     return canvas;
 }
@@ -238,7 +295,7 @@ export async function createPalettePngBlob(): Promise<Blob> {
         throw new Error("No processed result available");
     }
 
-    const canvas = createPaletteCanvas(processResult.colorsByIndex);
+    const canvas = await createPaletteCanvas(processResult.colorsByIndex);
 
     return await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((blob) => {
