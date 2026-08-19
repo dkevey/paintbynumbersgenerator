@@ -184,6 +184,8 @@
             btn.text('Creating listing image...');
             const listingPngBlob = await gui.createListingImagePngBlob();
             entries[productRoot + '_Shop/Listing images/1-Paint-by-number.png'] = [await blobToUint8Array(listingPngBlob), { level: 0 }];
+            const listing2PngBlob = await gui.createListingImage2PngBlob();
+            entries[productRoot + '_Shop/Listing images/2-Whats-included.png'] = [await blobToUint8Array(listing2PngBlob), { level: 0 }];
 
             const baseJson = {
                 productName: productName,
@@ -279,6 +281,8 @@
 
             const listingPngBlob = await gui.createListingImagePngBlob();
             fd.append('listingFiles', listingPngBlob, '1-Paint-by-number.png');
+            const listing2PngBlob = await gui.createListingImage2PngBlob();
+            fd.append('listingFiles', listing2PngBlob, '2-Whats-included.png');
 
             // replace baseJson with updated variants
             fd.set('baseJson', JSON.stringify(baseJson, null, 2));
