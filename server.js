@@ -59,6 +59,7 @@ app.post('/api/export-wfs', upload.fields([
     { name: 'image', maxCount: 1 },
     { name: 'svgFiles', maxCount: 20 },
     { name: 'pngFiles', maxCount: 20 },
+    { name: 'listingFiles', maxCount: 10 },
     { name: 'baseJson', maxCount: 1 }
 ]), async (req, res) => {
     try {
@@ -90,6 +91,7 @@ app.post('/api/export-wfs', upload.fields([
 
         const svgFiles = req.files && req.files.svgFiles ? req.files.svgFiles : [];
         const pngFiles = req.files && req.files.pngFiles ? req.files.pngFiles : [];
+        const listingFiles = req.files && req.files.listingFiles ? req.files.listingFiles : [];
 
         for (const file of svgFiles) {
             const target = path.join(productFolder, 'SVG', file.originalname || path.basename(file.path));
@@ -97,6 +99,10 @@ app.post('/api/export-wfs', upload.fields([
         }
         for (const file of pngFiles) {
             const target = path.join(productFolder, 'PNG', file.originalname || path.basename(file.path));
+            moveUploadedFile(file.path, target);
+        }
+        for (const file of listingFiles) {
+            const target = path.join(productFolder, '_Shop', 'Listing images', file.originalname || path.basename(file.path));
             moveUploadedFile(file.path, target);
         }
 
@@ -128,11 +134,15 @@ app.post('/api/export-wfs', upload.fields([
         const fileLinks = [];
         const svgDir = path.join(productFolder, 'SVG');
         const pngDir = path.join(productFolder, 'PNG');
+        const listingDir = path.join(productFolder, '_Shop', 'Listing images');
         for (const file of fs.readdirSync(svgDir)) {
             fileLinks.push({ name: file, url: `/jobs/${productFolderName}/SVG/${encodeURIComponent(file)}` });
         }
         for (const file of fs.readdirSync(pngDir)) {
             fileLinks.push({ name: file, url: `/jobs/${productFolderName}/PNG/${encodeURIComponent(file)}` });
+        }
+        for (const file of fs.readdirSync(listingDir)) {
+            fileLinks.push({ name: file, url: `/jobs/${productFolderName}/_Shop/Listing%20images/${encodeURIComponent(file)}` });
         }
         fileLinks.push({ name: originalName, url: `/jobs/${productFolderName}/${encodeURIComponent(originalName)}` });
         fileLinks.push({ name: 'base.json', url: `/jobs/${productFolderName}/base.json` });

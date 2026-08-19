@@ -3044,14 +3044,14 @@ define("guiprocessmanager", ["require", "exports", "colorreductionmanagement", "
 define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"], function (require, exports, common_8, guiprocessmanager_1, settings_2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    exports.loadExample = exports.downloadSVG = exports.downloadPNG = exports.downloadPalettePng = exports.createPalettePngBlob = exports.updateOutput = exports.process = exports.createWfsExportSvgs = exports.getProcessResult = exports.parseSettings = exports.log = exports.timeEnd = exports.time = void 0;
+    exports.loadExample = exports.downloadSVG = exports.downloadPNG = exports.downloadPalettePng = exports.createPalettePngBlob = exports.downloadListingImagePng = exports.updateListingImagePreview = exports.createListingImagePngBlob = exports.updateOutput = exports.process = exports.createWfsExportSvgs = exports.getProcessResult = exports.parseSettings = exports.log = exports.timeEnd = exports.time = void 0;
     let processResult = null;
     let cancellationToken = new common_8.CancellationToken();
     function updateWfsExportState(enabled) {
         if (typeof window !== "undefined") {
             window.__wfsExportReady = !!enabled;
         }
-        const exportButtonIds = ["btnDownloadWFSZip", "btnExportWFS"];
+        const exportButtonIds = ["btnDownloadWFSZip", "btnExportWFS", "btnDownloadListingImage"];
         for (const buttonId of exportButtonIds) {
             const exportBtn = document.getElementById(buttonId);
             if (exportBtn) {
@@ -3174,6 +3174,7 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
                 processResult = yield guiprocessmanager_1.GUIProcessManager.process(settings, cancellationToken);
                 updateWfsExportState(true);
                 yield updateOutput();
+                yield updateListingImagePreview();
                 const tabsOutput = M.Tabs.getInstance(document.getElementById("tabsOutput"));
                 tabsOutput.select("output-pane");
             }
@@ -3248,6 +3249,15 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
         }
         ctx.textAlign = "center";
     }
+    function drawTextWithLetterSpacing(ctx, text, x, y, letterSpacing) {
+        const previousTextAlign = ctx.textAlign;
+        ctx.textAlign = "left";
+        for (const character of Array.from(text)) {
+            ctx.fillText(character, x, y);
+            x += ctx.measureText(character).width + letterSpacing;
+        }
+        ctx.textAlign = previousTextAlign;
+    }
     function loadPaletteLogo() {
         return new Promise((resolve, reject) => {
             const logo = new Image();
@@ -3256,6 +3266,250 @@ define("gui", ["require", "exports", "common", "guiprocessmanager", "settings"],
             logo.src = "assets/WFS-Colour-Palette.svg";
         });
     }
+    function loadImage(src) {
+        return new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = () => reject(new Error("Unable to load listing image asset: " + src));
+            image.src = src;
+        });
+    }
+    function canvasToPngBlob(canvas) {
+        return new Promise((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    resolve(blob);
+                }
+                else {
+                    reject(new Error("Failed to generate PNG"));
+                }
+            }, "image/png");
+        });
+    }
+    function drawListingTick(ctx, tick, text, y) {
+        ctx.drawImage(tick, 338, y - 35, 63, 59);
+        ctx.fillStyle = "#5E3F24";
+        ctx.font = "36px 'Raleway', Arial, sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, 435, y);
+    }
+    function drawBonusBurst(ctx, centerX, centerY, outerRadius, innerRadius) {
+        const pointCount = 40;
+        ctx.beginPath();
+        for (let i = 0; i < pointCount; i++) {
+            const angle = -Math.PI / 2 + i * Math.PI * 2 / pointCount;
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            if (i === 0) {
+                ctx.moveTo(x, y);
+            }
+            else {
+                ctx.lineTo(x, y);
+            }
+        }
+        ctx.closePath();
+        ctx.fillStyle = "#B49D8B";
+        ctx.fill();
+    }
+    function drawArtworkInIpadScreen(ctx, artwork, ipadX, ipadY) {
+        const topLeft = { x: ipadX + 271, y: ipadY + 71 };
+        const topRight = { x: ipadX + 1186, y: ipadY + 174 };
+        const bottomRight = { x: ipadX + 1114, y: ipadY + 831 };
+        const bottomLeft = { x: ipadX + 202, y: ipadY + 707 };
+        const screenRatio = 895 / 621;
+        const artworkRatio = artwork.width / artwork.height;
+        let sourceX = 0;
+        let sourceY = 0;
+        let sourceWidth = artwork.width;
+        let sourceHeight = artwork.height;
+        if (artworkRatio > screenRatio) {
+            sourceWidth = artwork.height * screenRatio;
+            sourceX = (artwork.width - sourceWidth) / 2;
+        }
+        else {
+            sourceHeight = artwork.width / screenRatio;
+            sourceY = (artwork.height - sourceHeight) / 2;
+        }
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(topLeft.x, topLeft.y);
+        ctx.lineTo(topRight.x, topRight.y);
+        ctx.lineTo(bottomRight.x, bottomRight.y);
+        ctx.lineTo(bottomLeft.x, bottomLeft.y);
+        ctx.closePath();
+        ctx.clip();
+        ctx.setTransform((topRight.x - topLeft.x) / sourceWidth, (topRight.y - topLeft.y) / sourceWidth, (bottomLeft.x - topLeft.x) / sourceHeight, (bottomLeft.y - topLeft.y) / sourceHeight, topLeft.x, topLeft.y);
+        ctx.drawImage(artwork, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+        ctx.restore();
+    }
+    /*
+     * HOW TO POSITION ELEMENTS IN THE 2000 x 1500 LISTING IMAGE
+     *
+     * Canvas positions start at the top-left corner: x = 0, y = 0.
+     * - Move right: increase x.       Example: x 400 -> 420 moves right 20 px.
+     * - Move left: decrease x.        Example: x 400 -> 380 moves left 20 px.
+     * - Move down: increase y.        Example: y 600 -> 630 moves down 30 px.
+     * - Move up: decrease y.          Example: y 600 -> 570 moves up 30 px.
+     *
+     * TEXT: ctx.fillText("Text", x, y)
+     * Example: ctx.fillText("Bonus", 430, 1215);
+     * Change 430 to 450 to move it right 20 px, or change 1215 to 1255 to move it
+     * down 40 px. The active ctx.textAlign setting determines whether x refers to
+     * the text's left edge or centre.
+     *
+     * IMAGES: ctx.drawImage(image, x, y, width, height)
+     * Example: ctx.drawImage(brush, 102, 1164, 418, 297);
+     * Change x/y to move it. To enlarge it by 10%, multiply both width and height
+     * by 1.10 (418 x 297 becomes approximately 460 x 327). Changing both by the
+     * same percentage prevents distortion.
+     *
+     * CHECKLIST ROWS: drawListingTick(ctx, tick, "Text", y)
+     * Only the final value controls the row's vertical position. For example,
+     * changing 505 to 525 moves that complete tick-and-text row down 20 px.
+     *
+     * BONUS BURST: drawBonusBurst(ctx, centreX, centreY, outerRadius, innerRadius)
+     * Increase/decrease centreX or centreY to move it. Increase both radius values
+     * by the same percentage to enlarge it without changing the point proportions.
+     * The Bonus text, brush and Procreate text are separate elements; move all of
+     * their x or y values by the same amount when moving the whole bonus group.
+     *
+     * IPAD: ipadX and ipadY move the complete iPad. Example: ipadX 760 -> 780
+     * moves it right 20 px. The four corner values in drawArtworkInIpadScreen
+     * control only the generated artwork inside the screen. Apply the same x or y
+     * adjustment to all four corners to move it without changing its rotation.
+     */
+    function createListingImagePngBlob() {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (processResult == null) {
+                throw new Error("No processed result available");
+            }
+            const colourCount = parseInt($("#txtNrOfClusters").val() + "", 10) || processResult.colorsByIndex.length;
+            const artwork = document.getElementById("cReduction");
+            if (!artwork || artwork.width === 0 || artwork.height === 0) {
+                throw new Error("Finished colour artwork is not available");
+            }
+            yield Promise.all([
+                document.fonts.load("86px 'Eyesome Script'"),
+                document.fonts.load("104px 'Roboto'"),
+                document.fonts.load("36px 'Raleway'"),
+                document.fonts.load("700 34px 'Raleway'")
+            ]);
+            const [ipad, tick, logos, brush] = yield Promise.all([
+                loadImage("assets/ipad-procreate-toolbar.svg"),
+                loadImage("assets/tick.svg"),
+                loadImage("assets/logos.svg"),
+                // Avoid reusing a cached copy while the brush artwork is being refined locally.
+                loadImage("assets/brush.png?v=" + Date.now())
+            ]);
+            const canvas = document.createElement("canvas");
+            canvas.width = 2000;
+            canvas.height = 1500;
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#CFBAAB";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.moveTo(0, 48);
+            ctx.lineTo(710, 48);
+            ctx.lineTo(760, 128);
+            ctx.lineTo(710, 208);
+            ctx.lineTo(0, 208);
+            ctx.closePath();
+            ctx.fillStyle = "#B49D8B";
+            ctx.fill();
+            ctx.fillStyle = "white";
+            ctx.font = "86px 'Eyesome Script', 'Brush Script MT', 'Segoe Script', cursive";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText("Digital", 460, 127);
+            ctx.fillStyle = "#5E3F24";
+            ctx.font = "104px 'Roboto', Arial, sans-serif";
+            ctx.shadowColor = "rgba(94, 63, 36, 0.25)";
+            ctx.shadowBlur = 4;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 4;
+            drawCenteredTextWithLetterSpacing(ctx, "Paint by Number", 755, 355, 6);
+            ctx.shadowColor = "transparent";
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            drawListingTick(ctx, tick, "Numbered template file", 505);
+            drawListingTick(ctx, tick, colourCount + "-colour palette", 590);
+            drawListingTick(ctx, tick, "Reference image", 675);
+            drawListingTick(ctx, tick, "Quick start guide", 760);
+            ctx.drawImage(logos, 430, 810, 310, 204);
+            drawBonusBurst(ctx, 430, 1370, 320, 280);
+            ctx.fillStyle = "white";
+            ctx.font = "82px 'Eyesome Script', 'Brush Script MT', 'Segoe Script', cursive";
+            ctx.textAlign = "center";
+            ctx.fillText("Bonus", 430, 1205);
+            ctx.drawImage(brush, 232, 1195, 418, 297);
+            ctx.font = "700 34px 'Raleway', Arial, sans-serif";
+            ctx.textAlign = "left";
+            drawTextWithLetterSpacing(ctx, "Procreate", 445, 1330, 2);
+            drawTextWithLetterSpacing(ctx, "brushes", 485, 1385, 2);
+            const ipadX = 760;
+            const ipadY = 545;
+            // TODO: Replace this finished colour artwork with an automatically generated partially coloured preview.
+            drawArtworkInIpadScreen(ctx, artwork, ipadX, ipadY);
+            ctx.drawImage(ipad, ipadX, ipadY, 1231, 874);
+            return canvasToPngBlob(canvas);
+        });
+    }
+    exports.createListingImagePngBlob = createListingImagePngBlob;
+    function showListingImagePreview(blob) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const preview = document.getElementById("listingImagePreview");
+            const previousPreviewUrl = preview.dataset.objectUrl;
+            if (previousPreviewUrl) {
+                URL.revokeObjectURL(previousPreviewUrl);
+            }
+            const url = URL.createObjectURL(blob);
+            preview.src = url;
+            preview.dataset.objectUrl = url;
+            preview.style.display = "block";
+        });
+    }
+    function updateListingImagePreview() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                const blob = yield createListingImagePngBlob();
+                yield showListingImagePreview(blob);
+            }
+            catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                console.error("Unable to update listing image preview", err);
+                log("Unable to update listing image preview: " + message);
+            }
+        });
+    }
+    exports.updateListingImagePreview = updateListingImagePreview;
+    function downloadListingImagePng() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                log("Creating listing image...");
+                const blob = yield createListingImagePngBlob();
+                yield showListingImagePreview(blob);
+                const downloadUrl = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                document.body.appendChild(link);
+                link.href = downloadUrl;
+                link.download = "1-Paint-by-number.png";
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(downloadUrl);
+                log("Listing image created: 1-Paint-by-number.png");
+            }
+            catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                console.error("Unable to create listing image", err);
+                log("Unable to create listing image: " + message);
+                alert("Unable to create listing image: " + message);
+            }
+        });
+    }
+    exports.downloadListingImagePng = downloadListingImagePng;
     function createPaletteCanvas(colorsByIndex) {
         return __awaiter(this, void 0, void 0, function* () {
             const canvas = document.createElement("canvas");
@@ -3594,6 +3848,9 @@ define("main", ["require", "exports", "gui", "lib/clipboard"], function (require
         });
         $("#btnDownloadPalettePNG").click(function () {
             (0, gui_2.downloadPalettePng)();
+        });
+        $("#btnDownloadListingImage").click(function () {
+            (0, gui_2.downloadListingImagePng)();
         });
         $("#lnkTrivial").click(() => { (0, gui_2.loadExample)("imgTrivial"); return false; });
         $("#lnkSmall").click(() => { (0, gui_2.loadExample)("imgSmall"); return false; });

@@ -1,3 +1,35 @@
+@font-face {
+    font-family: "Eyesome Script";
+    src: url("../assets/fonts/Eyesome-Font/Eyesome-Script.otf") format("opentype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Roboto";
+    src: url("../assets/fonts/roboto/Roboto-Regular.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Raleway";
+    src: url("../assets/fonts/Raleway/static/Raleway-Regular.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Raleway";
+    src: url("../assets/fonts/Raleway/static/Raleway-Bold.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+}
+
 .status {
     background-color: white;
     padding: 10px;
@@ -53,4 +85,13 @@
     overflow: auto;
     max-width: 100%;
     max-height: 500px;
+}
+
+#listingImagePreview {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin-top: 16px;
+    border: 1px solid #B49D8B;
+    box-shadow: 0 4px 12px rgba(94, 63, 36, 0.2);
 }
