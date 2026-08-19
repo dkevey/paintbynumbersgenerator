@@ -15,7 +15,7 @@ function updateWfsExportState(enabled: boolean) {
     if (typeof window !== "undefined") {
         (window as any).__wfsExportReady = !!enabled;
     }
-    const exportButtonIds = ["btnDownloadWFSZip", "btnExportWFS", "btnDownloadListingImage"];
+    const exportButtonIds = ["btnDownloadWFSZip", "btnExportWFS", "btnDownloadListingImage", "btnDownloadListingImage2"];
     for (const buttonId of exportButtonIds) {
         const exportBtn = document.getElementById(buttonId) as HTMLButtonElement | null;
         if (exportBtn) {
@@ -140,6 +140,7 @@ export async function process() {
         updateWfsExportState(true);
         await updateOutput();
         await updateListingImagePreview();
+        await updateListingImage2Preview();
         const tabsOutput = M.Tabs.getInstance(document.getElementById("tabsOutput")!);
         tabsOutput.select("output-pane");
     } catch (e) {
@@ -268,6 +269,24 @@ function drawListingTick(ctx: CanvasRenderingContext2D, tick: HTMLImageElement, 
     ctx.fillText(text, 435, y);
 }
 
+interface ListingTextSegment {
+    text: string;
+    bold?: boolean;
+}
+
+function drawListingTickSegments(ctx: CanvasRenderingContext2D, tick: HTMLImageElement, segments: ListingTextSegment[], y: number) {
+    ctx.drawImage(tick, 338, y - 35, 63, 59);
+    ctx.fillStyle = "#5E3F24";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    let x = 435;
+    for (const segment of segments) {
+        ctx.font = (segment.bold ? "700 " : "400 ") + "34px 'Raleway', Arial, sans-serif";
+        ctx.fillText(segment.text, x, y);
+        x += ctx.measureText(segment.text).width;
+    }
+}
+
 function drawBonusBurst(ctx: CanvasRenderingContext2D, centerX: number, centerY: number, outerRadius: number, innerRadius: number) {
     const pointCount = 40;
     ctx.beginPath();
@@ -324,6 +343,66 @@ function drawArtworkInIpadScreen(ctx: CanvasRenderingContext2D, artwork: HTMLCan
         topLeft.y
     );
     ctx.drawImage(artwork, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+    ctx.restore();
+}
+
+function drawPaletteSwatchesInIpadFrame(ctx: CanvasRenderingContext2D, colorsByIndex: RGB[], ipadX: number, ipadY: number) {
+    const columns = 3;
+    const rows = 4;
+    const swatchWidth = 240;
+    const swatchHeight = 240;
+    const palette = document.createElement("canvas");
+    palette.width = columns * swatchWidth;
+    palette.height = rows * swatchHeight;
+    const paletteCtx = palette.getContext("2d")!;
+
+    paletteCtx.save();
+    drawRoundedRectangle(paletteCtx, 0, 0, palette.width, palette.height, 36);
+    paletteCtx.clip();
+    paletteCtx.fillStyle = "#303030";
+    paletteCtx.fillRect(0, 0, palette.width, palette.height);
+
+    const swatchCount = Math.min(12, colorsByIndex.length);
+    for (let index = 0; index < swatchCount; index++) {
+        const color = colorsByIndex[index];
+        const column = index % columns;
+        const row = Math.floor(index / columns);
+        const x = column * swatchWidth;
+        const y = row * swatchHeight;
+        paletteCtx.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
+        paletteCtx.fillRect(x, y, swatchWidth, swatchHeight);
+
+        const luminance = color[0] * 0.299 + color[1] * 0.587 + color[2] * 0.114;
+        paletteCtx.fillStyle = luminance > 155 ? "#000000" : "#FFFFFF";
+        paletteCtx.font = "44px Arial, sans-serif";
+        paletteCtx.textAlign = "left";
+        paletteCtx.textBaseline = "alphabetic";
+        paletteCtx.fillText(index.toString(), x + 18, y + swatchHeight - 22);
+    }
+    paletteCtx.restore();
+
+    const topLeft = { x: ipadX + 915, y: ipadY + 276 };
+    const topRight = { x: ipadX + 1161, y: ipadY + 307 };
+    const bottomRight = { x: ipadX + 1124, y: ipadY + 657 };
+    const bottomLeft = { x: ipadX + 874, y: ipadY + 626 };
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(topLeft.x, topLeft.y);
+    ctx.lineTo(topRight.x, topRight.y);
+    ctx.lineTo(bottomRight.x, bottomRight.y);
+    ctx.lineTo(bottomLeft.x, bottomLeft.y);
+    ctx.closePath();
+    ctx.clip();
+    ctx.setTransform(
+        (topRight.x - topLeft.x) / palette.width,
+        (topRight.y - topLeft.y) / palette.width,
+        (bottomLeft.x - topLeft.x) / palette.height,
+        (bottomLeft.y - topLeft.y) / palette.height,
+        topLeft.x,
+        topLeft.y
+    );
+    ctx.drawImage(palette, 0, 0);
     ctx.restore();
 }
 
@@ -449,8 +528,109 @@ export async function createListingImagePngBlob(): Promise<Blob> {
     return canvasToPngBlob(canvas);
 }
 
-async function showListingImagePreview(blob: Blob) {
-    const preview = document.getElementById("listingImagePreview") as HTMLImageElement;
+async function createNumberedTemplateCanvas(): Promise<HTMLCanvasElement> {
+    if (processResult == null) {
+        throw new Error("No processed result available");
+    }
+    const sizeMultiplier = parseInt($("#txtSizeMultiplier").val() + "", 10) || 3;
+    const fontSize = parseInt($("#txtLabelFontSize").val() + "", 10) || 50;
+    const svg = await GUIProcessManager.createSVG(
+        processResult.facetResult,
+        processResult.colorsByIndex,
+        sizeMultiplier,
+        false,
+        true,
+        true,
+        fontSize,
+        "#000000"
+    );
+    const svgText = new XMLSerializer().serializeToString(svg);
+    const svgBlob = new Blob([svgText], { type: "image/svg+xml;charset=utf-8" });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    try {
+        const image = await loadImage(svgUrl);
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth || image.width;
+        canvas.height = image.naturalHeight || image.height;
+        const ctx = canvas.getContext("2d")!;
+        ctx.fillStyle = "#FFFFFF";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0);
+        return canvas;
+    } finally {
+        URL.revokeObjectURL(svgUrl);
+    }
+}
+
+export async function createListingImage2PngBlob(): Promise<Blob> {
+    if (processResult == null) {
+        throw new Error("No processed result available");
+    }
+
+    await Promise.all([
+        document.fonts.load("104px 'Roboto'"),
+        document.fonts.load("36px 'Raleway'"),
+        document.fonts.load("700 34px 'Raleway'")
+    ]);
+    const [ipad, tick, numberedTemplate] = await Promise.all([
+        loadImage("assets/ipad-procreate-palette-frame.png"),
+        loadImage("assets/tick.svg"),
+        createNumberedTemplateCanvas()
+    ]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 2000;
+    canvas.height = 1500;
+    const ctx = canvas.getContext("2d")!;
+
+    ctx.fillStyle = "#CFBAAB";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#5E3F24";
+    ctx.font = "104px 'Roboto', Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.shadowColor = "rgba(94, 63, 36, 0.25)";
+    ctx.shadowBlur = 4;
+    ctx.shadowOffsetX = 3;
+    ctx.shadowOffsetY = 4;
+    drawCenteredTextWithLetterSpacing(ctx, "What's included", 755, 220, 6);
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.font = "36px 'Raleway', Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("What's included in your digital paint by numbers kit:", 345, 350);
+
+    drawListingTickSegments(ctx, tick, [
+        { text: "Quick start guide " }, { text: "PDF", bold: true }
+    ], 455);
+    drawListingTickSegments(ctx, tick, [
+        { text: "Procreate", bold: true }, { text: " numbered outline file, swatch & brush set" }
+    ], 540);
+    drawListingTickSegments(ctx, tick, [
+        { text: "PNG", bold: true }, { text: " and " }, { text: "SVG", bold: true }, { text: " files for other digital art apps" }
+    ], 625);
+    drawListingTickSegments(ctx, tick, [
+        { text: "Colour reference guide " }, { text: "PNG", bold: true }
+    ], 710);
+    drawListingTickSegments(ctx, tick, [
+        { text: "Finished artwork " }, { text: "PNG", bold: true }
+    ], 795);
+
+    const ipadX = 760;
+    const ipadY = 800;
+    drawArtworkInIpadScreen(ctx, numberedTemplate, ipadX, ipadY);
+    drawPaletteSwatchesInIpadFrame(ctx, processResult.colorsByIndex, ipadX, ipadY);
+    ctx.drawImage(ipad, ipadX, ipadY, 1231, 874);
+
+    return canvasToPngBlob(canvas);
+}
+
+async function showListingImagePreview(blob: Blob, previewId: string) {
+    const preview = document.getElementById(previewId) as HTMLImageElement;
     const previousPreviewUrl = preview.dataset.objectUrl;
     if (previousPreviewUrl) {
         URL.revokeObjectURL(previousPreviewUrl);
@@ -464,7 +644,7 @@ async function showListingImagePreview(blob: Blob) {
 export async function updateListingImagePreview() {
     try {
         const blob = await createListingImagePngBlob();
-        await showListingImagePreview(blob);
+        await showListingImagePreview(blob, "listingImagePreview");
     } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         console.error("Unable to update listing image preview", err);
@@ -472,11 +652,22 @@ export async function updateListingImagePreview() {
     }
 }
 
+export async function updateListingImage2Preview() {
+    try {
+        const blob = await createListingImage2PngBlob();
+        await showListingImagePreview(blob, "listingImage2Preview");
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("Unable to update listing image 2 preview", err);
+        log("Unable to update listing image 2 preview: " + message);
+    }
+}
+
 export async function downloadListingImagePng() {
     try {
         log("Creating listing image...");
         const blob = await createListingImagePngBlob();
-        await showListingImagePreview(blob);
+        await showListingImagePreview(blob, "listingImagePreview");
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement("a");
         document.body.appendChild(link);
@@ -491,6 +682,28 @@ export async function downloadListingImagePng() {
         console.error("Unable to create listing image", err);
         log("Unable to create listing image: " + message);
         alert("Unable to create listing image: " + message);
+    }
+}
+
+export async function downloadListingImage2Png() {
+    try {
+        log("Creating listing image 2...");
+        const blob = await createListingImage2PngBlob();
+        await showListingImagePreview(blob, "listingImage2Preview");
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        document.body.appendChild(link);
+        link.href = downloadUrl;
+        link.download = "2-Whats-included.png";
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+        log("Listing image created: 2-Whats-included.png");
+    } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error("Unable to create listing image 2", err);
+        log("Unable to create listing image 2: " + message);
+        alert("Unable to create listing image 2: " + message);
     }
 }
 

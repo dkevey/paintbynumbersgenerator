@@ -87,7 +87,8 @@
     max-height: 500px;
 }
 
-#listingImagePreview {
+#listingImagePreview,
+#listingImage2Preview {
     display: block;
     width: 100%;
     height: auto;
