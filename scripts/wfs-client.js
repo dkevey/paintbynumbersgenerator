@@ -181,6 +181,10 @@
             const palettePngBlob = await gui.createPalettePngBlob();
             entries[productRoot + 'PNG/' + productFolderName + '_Colour_Palette.png'] = [await blobToUint8Array(palettePngBlob), { level: 0 }];
 
+            btn.text('Creating listing image...');
+            const listingPngBlob = await gui.createListingImagePngBlob();
+            entries[productRoot + '_Shop/Listing images/1-Paint-by-number.png'] = [await blobToUint8Array(listingPngBlob), { level: 0 }];
+
             const baseJson = {
                 productName: productName,
                 sanitizedProductName: safeName,
@@ -272,6 +276,9 @@
 
             const palettePngBlob = await gui.createPalettePngBlob();
             fd.append('pngFiles', palettePngBlob, `WFS_${safeName}_Colour_Palette.png`);
+
+            const listingPngBlob = await gui.createListingImagePngBlob();
+            fd.append('listingFiles', listingPngBlob, '1-Paint-by-number.png');
 
             // replace baseJson with updated variants
             fd.set('baseJson', JSON.stringify(baseJson, null, 2));

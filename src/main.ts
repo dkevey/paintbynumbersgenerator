@@ -1,4 +1,4 @@
-import { downloadPalettePng, downloadPNG, downloadSVG, loadExample, process, updateOutput } from "./gui";
+import { downloadListingImagePng, downloadPalettePng, downloadPNG, downloadSVG, loadExample, process, updateOutput } from "./gui";
 import { Clipboard } from "./lib/clipboard";
 
 $(document).ready(function () {
@@ -60,6 +60,10 @@ $(document).ready(function () {
 
     $("#btnDownloadPalettePNG").click(function () {
         downloadPalettePng();
+    });
+
+    $("#btnDownloadListingImage").click(function () {
+        downloadListingImagePng();
     });
 
     $("#lnkTrivial").click(() => { loadExample("imgTrivial"); return false; });
