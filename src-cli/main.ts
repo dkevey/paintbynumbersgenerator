@@ -13,7 +13,17 @@ import { FacetResult } from "../src/facetmanagement";
 import { FacetReducer } from "../src/facetReducer";
 import { Settings } from "../src/settings";
 import { Point } from "../src/structs/point";
-const svg2img = require("svg2img");
+
+async function renderSVG(svgString: string, format: "png" | "jpg", quality: number = 95): Promise<Buffer> {
+    const image = await canvas.loadImage(Buffer.from(svgString));
+    const outputCanvas = canvas.createCanvas(image.width, image.height);
+    outputCanvas.getContext("2d").drawImage(image, 0, 0);
+
+    if (format === "jpg") {
+        return outputCanvas.toBuffer("image/jpeg", { quality: quality / 100 });
+    }
+    return outputCanvas.toBuffer("image/png");
+}
 
 class CLISettingsOutputProfile {
     public name: string = "";
@@ -195,16 +205,7 @@ async function main() {
             // write SVG
             fs.writeFileSync(svgProfilePath, svgString);
 
-            // write PNG via svg2img
-            const imageBuffer = await new Promise<Buffer>((then, reject) => {
-                svg2img(svgString, function (error: Error, buffer: Buffer) {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        then(buffer);
-                    }
-                });
-            });
+            const imageBuffer = await renderSVG(svgString, "png");
             fs.writeFileSync(pngProfilePath, imageBuffer);
         }
     } else {
@@ -222,26 +223,10 @@ async function main() {
                 fs.writeFileSync(svgProfilePath, svgString);
             } else if (profile.filetype === "png") {
 
-                const imageBuffer = await new Promise<Buffer>((then, reject) => {
-                    svg2img(svgString, function (error: Error, buffer: Buffer) {
-                        if (error) {
-                            reject(error);
-                        } else {
-                            then(buffer);
-                        }
-                    });
-                });
+                const imageBuffer = await renderSVG(svgString, "png");
                 fs.writeFileSync(svgProfilePath, imageBuffer);
             } else if (profile.filetype === "jpg") {
-                const imageBuffer = await new Promise<Buffer>((then, reject) => {
-                    svg2img(svgString, { format: "jpg", quality: profile.filetypeQuality }, function (error: Error, buffer: Buffer) {
-                        if (error) {
-                            reject(error);
-                        } else {
-                            then(buffer);
-                        }
-                    });
-                });
+                const imageBuffer = await renderSVG(svgString, "jpg", profile.filetypeQuality);
                 fs.writeFileSync(svgProfilePath, imageBuffer);
             }
         }

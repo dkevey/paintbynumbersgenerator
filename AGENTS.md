@@ -23,7 +23,7 @@ The WFS workflow is the current priority. Preserve the original paint-by-numbers
 
 ## Local development
 
-- Use Node.js 16 for the established local workflow: `nvm use 16`.
+- Use Node.js 24.19.0 for the established local workflow: `nvm use` reads the pinned version from `.nvmrc`.
 - Install dependencies with `npm install` when needed.
 - Start the WFS local server from the repository root with `PORT=3001 node server.js`.
 - Open `http://localhost:3001` in the browser.

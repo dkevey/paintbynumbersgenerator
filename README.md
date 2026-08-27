@@ -108,9 +108,15 @@ The CLI version is useful if you want to automate the process into your own scri
 
 ## Running locally
 
-I used VSCode, which has built in typescript support. To debug it uses a tiny webserver to host the files on localhost. 
+Use Node.js 24.19.0 (pinned in `.nvmrc`). To run the Wattle Fern Studio workflow locally:
 
-To run do `npm install` to restore packages and then `npm start` to start the webserver
+```sh
+nvm use
+npm install
+PORT=3001 node server.js
+```
+
+Then open `http://localhost:3001`. The original lite-server workflow remains available with `npm start` on port 10001.
 
 
 ## Compiling the cli version

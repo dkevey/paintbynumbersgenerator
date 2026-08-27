@@ -24,8 +24,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 var __generator = (this && this.__generator) || function (thisArg, body) {
-    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
-    return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
     function verb(n) { return function (v) { return step([n, v]); }; }
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
@@ -65,7 +65,25 @@ var facetmanagement_1 = require("../src/facetmanagement");
 var facetReducer_1 = require("../src/facetReducer");
 var settings_1 = require("../src/settings");
 var point_1 = require("../src/structs/point");
-var svg2img = require("svg2img");
+function renderSVG(svgString_1, format_1) {
+    return __awaiter(this, arguments, void 0, function (svgString, format, quality) {
+        var image, outputCanvas;
+        if (quality === void 0) { quality = 95; }
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0: return [4 /*yield*/, canvas.loadImage(Buffer.from(svgString))];
+                case 1:
+                    image = _a.sent();
+                    outputCanvas = canvas.createCanvas(image.width, image.height);
+                    outputCanvas.getContext("2d").drawImage(image, 0, 0);
+                    if (format === "jpg") {
+                        return [2 /*return*/, outputCanvas.toBuffer("image/jpeg", { quality: quality / 100 })];
+                    }
+                    return [2 /*return*/, outputCanvas.toBuffer("image/png")];
+            }
+        });
+    });
+}
 var CLISettingsOutputProfile = /** @class */ (function () {
     function CLISettingsOutputProfile() {
         this.name = "";
@@ -91,7 +109,7 @@ var CLISettings = /** @class */ (function (_super) {
 }(settings_1.Settings));
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, imagePath, svgPath, productNameArg, productName, wfs, configPath, settings, parsed, img, c, ctx, imgData, width, height, newWidth, newHeight, newHeight, newWidth, tempCanvas, cKmeans, ctxKmeans, kmeansImgData, colormapResult, facetResult, run, variants, _loop_1, _i, variants_1, v, _loop_2, _a, _b, profile, palettePath, colorFrequency, _c, _d, color, _e, _f, facet, colorAliasesByColor, _g, _h, alias, totalFrequency, paletteInfo;
+        var args, imagePath, svgPath, productNameArg, productName, wfs, configPath, settings, parsed, img, c, ctx, imgData, width, height, newWidth, newHeight, newHeight, newWidth, tempCanvas, cKmeans, ctxKmeans, kmeansImgData, colormapResult, facetResult, run, variants, _i, variants_1, v, baseName, svgProfilePath, pngProfilePath, svgString, imageBuffer, _a, _b, profile, svgProfilePath, svgString, imageBuffer, imageBuffer, palettePath, colorFrequency, _c, _d, color, _e, _f, facet, colorAliasesByColor, _g, _h, alias, totalFrequency, paletteInfo;
         return __generator(this, function (_j) {
             switch (_j.label) {
                 case 0:
@@ -238,7 +256,7 @@ function main() {
                         })];
                 case 14:
                     _j.sent();
-                    if (!wfs) return [3 /*break*/, 19];
+                    if (!wfs) return [3 /*break*/, 20];
                     variants = [
                         { suffix: "BW_Numbers", svgShowLabels: true, svgFillFacets: false, svgShowBorders: true },
                         { suffix: "Colour_Reference", svgShowLabels: false, svgFillFacets: true, svgShowBorders: false },
@@ -246,116 +264,64 @@ function main() {
                         { suffix: "Colour_Numbers_Outline", svgShowLabels: true, svgFillFacets: true, svgShowBorders: true },
                         { suffix: "BW_Outline", svgShowLabels: false, svgFillFacets: false, svgShowBorders: true },
                     ];
-                    _loop_1 = function (v) {
-                        var baseName, svgProfilePath, pngProfilePath, svgString, imageBuffer;
-                        return __generator(this, function (_k) {
-                            switch (_k.label) {
-                                case 0:
-                                    baseName = "WFS_".concat(productName, "_").concat(v.suffix);
-                                    svgProfilePath = path.join(path.dirname(svgPath), baseName + ".svg");
-                                    pngProfilePath = path.join(path.dirname(svgPath), baseName + ".png");
-                                    console.log("Generating WFS variant ".concat(v.suffix, " -> ").concat(baseName));
-                                    return [4 /*yield*/, createSVG(facetResult, colormapResult.colorsByIndex, 3, v.svgFillFacets, v.svgShowBorders, v.svgShowLabels, 60, "#000")];
-                                case 1:
-                                    svgString = _k.sent();
-                                    // write SVG
-                                    fs.writeFileSync(svgProfilePath, svgString);
-                                    return [4 /*yield*/, new Promise(function (then, reject) {
-                                            svg2img(svgString, function (error, buffer) {
-                                                if (error) {
-                                                    reject(error);
-                                                }
-                                                else {
-                                                    then(buffer);
-                                                }
-                                            });
-                                        })];
-                                case 2:
-                                    imageBuffer = _k.sent();
-                                    fs.writeFileSync(pngProfilePath, imageBuffer);
-                                    return [2 /*return*/];
-                            }
-                        });
-                    };
                     _i = 0, variants_1 = variants;
                     _j.label = 15;
                 case 15:
-                    if (!(_i < variants_1.length)) return [3 /*break*/, 18];
+                    if (!(_i < variants_1.length)) return [3 /*break*/, 19];
                     v = variants_1[_i];
-                    return [5 /*yield**/, _loop_1(v)];
+                    baseName = "WFS_".concat(productName, "_").concat(v.suffix);
+                    svgProfilePath = path.join(path.dirname(svgPath), baseName + ".svg");
+                    pngProfilePath = path.join(path.dirname(svgPath), baseName + ".png");
+                    console.log("Generating WFS variant ".concat(v.suffix, " -> ").concat(baseName));
+                    return [4 /*yield*/, createSVG(facetResult, colormapResult.colorsByIndex, 3, v.svgFillFacets, v.svgShowBorders, v.svgShowLabels, 60, "#000")];
                 case 16:
-                    _j.sent();
-                    _j.label = 17;
+                    svgString = _j.sent();
+                    // write SVG
+                    fs.writeFileSync(svgProfilePath, svgString);
+                    return [4 /*yield*/, renderSVG(svgString, "png")];
                 case 17:
+                    imageBuffer = _j.sent();
+                    fs.writeFileSync(pngProfilePath, imageBuffer);
+                    _j.label = 18;
+                case 18:
                     _i++;
                     return [3 /*break*/, 15];
-                case 18: return [3 /*break*/, 23];
-                case 19:
-                    _loop_2 = function (profile) {
-                        var svgProfilePath, svgString, imageBuffer, imageBuffer;
-                        return __generator(this, function (_l) {
-                            switch (_l.label) {
-                                case 0:
-                                    console.log("Generating output for " + profile.name);
-                                    if (typeof profile.filetype === "undefined") {
-                                        profile.filetype = "svg";
-                                    }
-                                    svgProfilePath = path.join(path.dirname(svgPath), path.basename(svgPath).substr(0, path.basename(svgPath).length - path.extname(svgPath).length) + "-" + profile.name) + "." + profile.filetype;
-                                    return [4 /*yield*/, createSVG(facetResult, colormapResult.colorsByIndex, profile.svgSizeMultiplier, profile.svgFillFacets, profile.svgShowBorders, profile.svgShowLabels, profile.svgFontSize, profile.svgFontColor)];
-                                case 1:
-                                    svgString = _l.sent();
-                                    if (!(profile.filetype === "svg")) return [3 /*break*/, 2];
-                                    fs.writeFileSync(svgProfilePath, svgString);
-                                    return [3 /*break*/, 6];
-                                case 2:
-                                    if (!(profile.filetype === "png")) return [3 /*break*/, 4];
-                                    return [4 /*yield*/, new Promise(function (then, reject) {
-                                            svg2img(svgString, function (error, buffer) {
-                                                if (error) {
-                                                    reject(error);
-                                                }
-                                                else {
-                                                    then(buffer);
-                                                }
-                                            });
-                                        })];
-                                case 3:
-                                    imageBuffer = _l.sent();
-                                    fs.writeFileSync(svgProfilePath, imageBuffer);
-                                    return [3 /*break*/, 6];
-                                case 4:
-                                    if (!(profile.filetype === "jpg")) return [3 /*break*/, 6];
-                                    return [4 /*yield*/, new Promise(function (then, reject) {
-                                            svg2img(svgString, { format: "jpg", quality: profile.filetypeQuality }, function (error, buffer) {
-                                                if (error) {
-                                                    reject(error);
-                                                }
-                                                else {
-                                                    then(buffer);
-                                                }
-                                            });
-                                        })];
-                                case 5:
-                                    imageBuffer = _l.sent();
-                                    fs.writeFileSync(svgProfilePath, imageBuffer);
-                                    _l.label = 6;
-                                case 6: return [2 /*return*/];
-                            }
-                        });
-                    };
-                    _a = 0, _b = settings.outputProfiles;
-                    _j.label = 20;
+                case 19: return [3 /*break*/, 28];
                 case 20:
-                    if (!(_a < _b.length)) return [3 /*break*/, 23];
-                    profile = _b[_a];
-                    return [5 /*yield**/, _loop_2(profile)];
+                    _a = 0, _b = settings.outputProfiles;
+                    _j.label = 21;
                 case 21:
-                    _j.sent();
-                    _j.label = 22;
+                    if (!(_a < _b.length)) return [3 /*break*/, 28];
+                    profile = _b[_a];
+                    console.log("Generating output for " + profile.name);
+                    if (typeof profile.filetype === "undefined") {
+                        profile.filetype = "svg";
+                    }
+                    svgProfilePath = path.join(path.dirname(svgPath), path.basename(svgPath).substr(0, path.basename(svgPath).length - path.extname(svgPath).length) + "-" + profile.name) + "." + profile.filetype;
+                    return [4 /*yield*/, createSVG(facetResult, colormapResult.colorsByIndex, profile.svgSizeMultiplier, profile.svgFillFacets, profile.svgShowBorders, profile.svgShowLabels, profile.svgFontSize, profile.svgFontColor)];
                 case 22:
-                    _a++;
-                    return [3 /*break*/, 20];
+                    svgString = _j.sent();
+                    if (!(profile.filetype === "svg")) return [3 /*break*/, 23];
+                    fs.writeFileSync(svgProfilePath, svgString);
+                    return [3 /*break*/, 27];
                 case 23:
+                    if (!(profile.filetype === "png")) return [3 /*break*/, 25];
+                    return [4 /*yield*/, renderSVG(svgString, "png")];
+                case 24:
+                    imageBuffer = _j.sent();
+                    fs.writeFileSync(svgProfilePath, imageBuffer);
+                    return [3 /*break*/, 27];
+                case 25:
+                    if (!(profile.filetype === "jpg")) return [3 /*break*/, 27];
+                    return [4 /*yield*/, renderSVG(svgString, "jpg", profile.filetypeQuality)];
+                case 26:
+                    imageBuffer = _j.sent();
+                    fs.writeFileSync(svgProfilePath, imageBuffer);
+                    _j.label = 27;
+                case 27:
+                    _a++;
+                    return [3 /*break*/, 21];
+                case 28:
                     console.log("Generating palette info");
                     palettePath = path.join(path.dirname(svgPath), path.basename(svgPath).substr(0, path.basename(svgPath).length - path.extname(svgPath).length) + ".json");
                     colorFrequency = [];
@@ -390,12 +356,12 @@ function main() {
         });
     });
 }
-function createSVG(facetResult, colorsByIndex, sizeMultiplier, fill, stroke, addColorLabels, fontSize, fontColor, onUpdate) {
-    if (fontSize === void 0) { fontSize = 60; }
-    if (fontColor === void 0) { fontColor = "black"; }
-    if (onUpdate === void 0) { onUpdate = null; }
-    return __awaiter(this, void 0, void 0, function () {
+function createSVG(facetResult_1, colorsByIndex_1, sizeMultiplier_1, fill_1, stroke_1, addColorLabels_1) {
+    return __awaiter(this, arguments, void 0, function (facetResult, colorsByIndex, sizeMultiplier, fill, stroke, addColorLabels, fontSize, fontColor, onUpdate) {
         var svgString, xmlns, svgWidth, svgHeight, _i, _a, f, newpath, useSegments, i, svgPathString, data, i, midpointX, midpointY, svgStroke, svgFill, labelOffsetX, labelOffsetY, labelWidth, labelHeight, nrOfDigits, svgLabelString;
+        if (fontSize === void 0) { fontSize = 60; }
+        if (fontColor === void 0) { fontColor = "black"; }
+        if (onUpdate === void 0) { onUpdate = null; }
         return __generator(this, function (_b) {
             svgString = "";
             xmlns = "http://www.w3.org/2000/svg";
